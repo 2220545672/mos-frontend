@@ -67,8 +67,8 @@
         <v-select v-model="installToDiskDialog.filesystem" :items="['ext4', 'btrfs', 'xfs', 'vfat']" :label="$t('filesystem')" required outlined density="comfortable"></v-select>
         <v-switch v-model="installToDiskDialog.extra_partition" :label="$t('extra partition')" inset color="green" density="compact" hide-details="auto"></v-switch>
         <div class="d-flex align-center">
-          <v-switch v-model="installToDiskDialog.backup_label" :label="$t('set backup label on old device')" inset color="green" density="compact" hide-details="auto"></v-switch>
-          <v-tooltip :text="$t('old device gets label mos_backup')" open-on-click :open-on-hover="false">
+          <v-switch v-model="installToDiskDialog.backup_label" :label="$t('set backup label on new device')" inset color="green" density="compact" hide-details="auto"></v-switch>
+          <v-tooltip :text="$t('new device gets label mos_backup')" open-on-click :open-on-hover="false">
             <template #activator="{ props }">
               <v-icon size="small" icon="mdi-information-outline" color="blue" class="ml-2" v-bind="props"></v-icon>
             </template>

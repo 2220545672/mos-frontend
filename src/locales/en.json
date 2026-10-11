@@ -1831,6 +1831,6 @@
   "add as bookmark": "Add as Bookmark",
   "bookmarks saved successfully": "Bookmarks saved successfully",
   "bookmarks could not be saved": "Bookmarks could not be saved",
-  "set backup label on old device": "Set backup label on old device",
-  "old device gets label mos_backup": "Old device gets label MOS_BACKUP"
+  "set backup label on new device": "Set backup label on new device",
+  "new device gets label mos_backup": "New device gets label MOS_BACKUP"
 }
