@@ -258,7 +258,8 @@ const connectStats = (containerName: string) => {
   wsStatsError.value = null;
   loading.value = true;
 
-  socket = io('/docker', {
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/docker` : '/docker', {
     path: '/api/v1/socket.io/',
     transports: ['websocket'],
     upgrade: false,

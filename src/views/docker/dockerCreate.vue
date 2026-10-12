@@ -71,7 +71,10 @@
           </v-card-text>
           <v-divider :color="$vuetify.theme.name === 'dark' ? 'white' : 'black'"></v-divider>
           <v-card-text>
-            <v-text-field :label="$t('name')" v-model="form.name" required></v-text-field>
+            <v-text-field :label="$t('name')" v-model="form.name" required :hide-details="isContainerNameExists ? 'auto' : false"></v-text-field>
+            <v-alert v-if="isContainerNameExists" type="warning" variant="tonal" density="compact" class="mb-2">
+              {{ $t('warning: container with this name already exists, this will overwrite the existing container') }}
+            </v-alert>
             <v-text-field :label="$t('repository')" v-model="form.repo" required></v-text-field>
             <v-select
               :label="$t('network')"
@@ -519,7 +522,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, nextTick } from 'vue';
+import { onMounted, ref, nextTick, computed } from 'vue';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -576,6 +579,10 @@ const sidePanel = ref({
   props: {},
 });
 const usedDockerPorts = ref([]);
+
+const isContainerNameExists = computed(() => {
+  return containerOptions.value.some((container) => container.name === form.value.name);
+});
 
 onMounted(() => {
   window.scrollTo(0, 0);

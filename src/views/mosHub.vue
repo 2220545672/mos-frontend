@@ -152,9 +152,9 @@
                 <div class="hub-grid">
                   <v-card v-for="(tpl, i) in mosHub" :key="tpl.name || i" style="height: 250px; display: flex; flex-direction: column" class="pa-0">
                     <v-card-text class="pa-0 pt-4" style="position: relative">
-                      <div class="d-flex justify-center">
-                        <v-img v-if="tpl.icon" :src="tpl.icon" height="60" contain style="max-width: 100%; z-index: 0"></v-img>
-                        <v-icon v-else size="100" color="grey" style="opacity: 0.5; z-index: 0">mdi-package-variant</v-icon>
+                      <div class="d-flex justify-center align-center" style="height: 60px; width: 60px; margin: 0 auto; overflow: hidden">
+                        <v-img v-if="tpl.icon" :src="tpl.icon" contain style="max-width: 100%; max-height: 100%; width: auto; height: auto"></v-img>
+                        <v-icon v-else size="48" color="grey" style="opacity: 0.5">mdi-package-variant</v-icon>
                       </div>
                       <v-chip
                         v-if="tpl.maintainer"
@@ -275,33 +275,30 @@
   <v-dialog v-model="mosHubRepositoriesDialog.value" max-width="600px" scrollable>
     <v-card class="pa-0" :title="$t('repositories')" prepend-icon="mdi-source-repository">
       <v-card-text class="py-0" style="max-height: 60vh; overflow-y: auto">
-          <v-row class="pa-0 pt-2">
-            <v-col cols="12" v-for="(repo, index) in mosHubRepositoriesDialog.repositories" :key="index" class="d-flex align-center">
-              <v-text-field
-                v-model="mosHubRepositoriesDialog.repositories[index]"
-                :label="$t('repository') + ' ' + (index + 1)"
-                outlined
-                density="comfortable"
-                class="flex-grow-1 mr-2"
-                append-icon="mdi-delete"
-                @click:append="mosHubRepositoriesDialog.repositories.splice(index, 1)"
-                hide-details="auto"
-              ></v-text-field>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="12" class="d-flex flex-column gap-2 mt-0 mb-2" style="align-items: flex-end">
-              <v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click="openKnownReposDialog()">
-                {{ $t('known repositories') }}
-              </v-btn>
-              <v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click="mosHubRepositoriesDialog.repositories.push('')">
-                {{ $t('add repository') }}
-              </v-btn>
-            </v-col>
-          </v-row>
+        <v-row class="pa-0 pt-2 pb-4">
+          <v-col cols="12" v-for="(repo, index) in mosHubRepositoriesDialog.repositories" :key="index" class="d-flex align-center pa-0 gap-2">
+            <v-text-field
+              v-model="mosHubRepositoriesDialog.repositories[index]"
+              :label="$t('repository') + ' ' + (index + 1)"
+              outlined
+              density="comfortable"
+              class="flex-grow-1"
+              hide-details="auto"
+            ></v-text-field>
+            <v-btn color="red" size="small" density="comfortable" variant="plain" icon @click="mosHubRepositoriesDialog.repositories.splice(index, 1)">
+              <v-icon size="18">mdi-delete</v-icon>
+            </v-btn>
+            <v-btn color="green" size="small" density="comfortable" variant="plain" icon @click="mosHubRepositoriesDialog.repositories.splice(index + 1, 0, '')">
+              <v-icon size="18">mdi-plus</v-icon>
+            </v-btn>
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
+        <v-btn color="secondary" variant="text" prepend-icon="mdi-source-repository" @click="openKnownReposDialog()">
+          {{ $t('known repositories') }}
+        </v-btn>
         <v-spacer />
         <v-btn color="onPrimary" @click="mosHubRepositoriesDialog.value = false">{{ $t('cancel') }}</v-btn>
         <v-btn color="onPrimary" @click="setHubRepositories(mosHubRepositoriesDialog.repositories)">{{ $t('save') }}</v-btn>
@@ -409,7 +406,11 @@
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
-        <v-tooltip :text="$t('mos hub is community driven and not all templates are tested and verified. please check the template/source before installing and use at your own risk')" location="top" max-width="300">
+        <v-tooltip
+          :text="$t('mos hub is community driven and not all templates are tested and verified. please check the template/source before installing and use at your own risk')"
+          location="top"
+          max-width="300"
+        >
           <template #activator="{ props }">
             <v-icon v-bind="props" color="info" icon="mdi-information"></v-icon>
           </template>
@@ -429,14 +430,14 @@
   <v-dialog v-model="knownReposDialog.value" persistent max-width="600" scrollable>
     <v-card :title="$t('known repositories')" prepend-icon="mdi-source-repository">
       <v-card-text style="max-height: 60vh; overflow-y: auto">
-          <v-list>
-            <v-list-item v-for="repo in knownRepos" :key="repo" @click="toggleKnownRepo(repo)">
-              <template #append>
-                <v-icon v-if="selectedKnownRepos.includes(repo)" color="success">mdi-check-circle</v-icon>
-              </template>
-              <v-list-item-title>{{ repo }}</v-list-item-title>
-            </v-list-item>
-          </v-list>
+        <v-list class="pa-0">
+          <v-list-item v-for="repo in knownRepos" :key="repo" @click="toggleKnownRepo(repo)">
+            <template #append>
+              <v-icon v-if="selectedKnownRepos.includes(repo)" color="success">mdi-check-circle</v-icon>
+            </template>
+            <v-list-item-title>{{ repo }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -536,7 +537,8 @@ onMounted(() => {
 const getMosHub = async (search, limit = 24, skip = 0, order = hubOrderSel.value, sort = hubSortingSel.value, type = hubTypeSel.value, category = hubCategoriesSel.value) => {
   hubLoading.value = true;
   try {
-    const url = new URL('/api/v1/mos/hub/index', window.location.origin);
+    const baseUrl = __API_BASE_URL__ || window.location.origin;
+    const url = new URL('/api/v1/mos/hub/index', baseUrl);
     url.searchParams.append('search', search || '');
     url.searchParams.append('order', order);
     url.searchParams.append('sort', sort);

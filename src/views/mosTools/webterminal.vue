@@ -68,7 +68,8 @@ onMounted(async () => {
   });
 
   // Websocket connection through proxy
-  socket = io('/terminal', { path: '/api/v1/socket.io/' });
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/terminal` : '/terminal', { path: '/api/v1/socket.io/' });
 
   socket.on('connect', () => {
     if (!joined) {

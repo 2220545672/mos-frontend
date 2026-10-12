@@ -214,6 +214,15 @@
                       <v-icon size="small" color="medium-emphasis">mdi-chevron-right</v-icon>
                     </template>
                   </v-list-item>
+                  <v-list-item rounded="lg" to="/mosSettings/nut" color="primary">
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-peanut-outline" class="mr-3"></v-icon>
+                    </template>
+                    <v-list-item-title class="font-weight-medium">{{ $t('nut') }}</v-list-item-title>
+                    <template v-slot:append>
+                      <v-icon size="small" color="medium-emphasis">mdi-chevron-right</v-icon>
+                    </template>
+                  </v-list-item>
                 </v-list>
               </div>
             </div>
@@ -318,6 +327,16 @@
                       <v-icon size="small" color="medium-emphasis">mdi-chevron-right</v-icon>
                     </template>
                   </v-list-item>
+                  <v-list-item rounded="lg" to="/mosSettings/rsync" color="primary">
+                    <template v-slot:prepend>
+                      <v-icon icon="mdi-sync" class="mr-3"></v-icon>
+                    </template>
+                    <v-list-item-title class="font-weight-medium">{{ $t('rsync') }}</v-list-item-title>
+                    <template v-slot:append>
+                      <v-icon size="small" color="medium-emphasis">mdi-chevron-right</v-icon>
+                    </template>
+                  </v-list-item>
+
                 </v-list>
               </div>
             </div>
@@ -437,13 +456,14 @@
             v-model="updateOsDialog.channel"
             :items="getMosChannels()"
             :label="t('channel')"
-            @update:modelValue="onChannelChange"
+            @update:modelValue="onChannelChange()"
             :hide-details="updateOsDialog.channel && updateOsDialog.channel !== osInfo?.mos?.channel ? 'auto' : false"
+            :loading="updateOsDialog.loading"
           ></v-select>
           <v-alert v-if="updateOsDialog.channel && updateOsDialog.channel !== osInfo?.mos?.channel" type="warning" icon="mdi-alert" variant="text" density="compact" class="text-caption">
             {{ t('channel is being switched from') }} {{ osInfo.mos.channel }} {{ t('to') }} {{ updateOsDialog.channel }}
           </v-alert>
-          <v-select v-model="updateOsDialog.release" :items="getMosReleasesOfChannel()" :label="t('release')"></v-select>
+          <v-select v-model="updateOsDialog.release" :items="getMosReleasesOfChannel()" :label="t('release')" :loading="updateOsDialog.loading"></v-select>
           <v-switch v-model="updateOsDialog.update_kernel" :label="t('update kernel')" inset density="compact" color="green" hide-details="auto" />
           <v-switch v-model="updateOsDialog.update_plugins" :label="t('update plugins')" inset density="compact" color="green" hide-details="auto" />
         </div>
@@ -462,7 +482,7 @@
       <v-card-text class="pa-0">
         <div style="max-height: 60vh; overflow-y: auto; padding: 16px; padding-bottom: 32px">
           <p class="mb-4">{{ t('please select your target kernel release!') }}</p>
-          <v-select v-model="updateKernelDialog.version" :items="['recommended', ...mosKernel.map((k) => k.tag_name)]" :label="t('kernel release')" hide-details="auto" />
+          <v-select v-model="updateKernelDialog.version" :items="['recommended', ...mosKernel.map((k) => k.tag_name)]" :label="t('kernel release')" hide-details="auto" :loading="updateKernelDialog.loading" />
         </div>
       </v-card-text>
       <v-divider />
@@ -679,7 +699,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, reactive, inject } from 'vue';
+import { onMounted, ref, reactive, inject, watch, nextTick } from 'vue';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
 import { useOverlay } from '@/composables/useOverlay';
@@ -708,16 +728,16 @@ const updateOsDialog = reactive({
   release: null,
   update_kernel: true,
   update_plugins: true,
+  loading: true
 });
 const updateKernelDialog = reactive({
   value: false,
   version: null,
+  loading: true
 });
 
 onMounted(() => {
-  getMosReleases();
   getOsInfo();
-  getMosKernel();
 });
 
 const getMosReleases = async () => {
@@ -735,6 +755,12 @@ const getMosReleases = async () => {
     }
 
     const data = await res.json();
+
+    const hasRequiredKeys = ['alpha', 'beta', 'stable'].some(key => key in data);
+    if (!hasRequiredKeys) {
+      throw new Error(`${t('invalid releases data')}|$| ${t('required channels not found')}`);
+    }
+
     mosReleases.value = data;
   } catch (e) {
     const [userMessage, apiErrorMessage] = e.message.split('|$|');
@@ -823,7 +849,7 @@ const updateOS = async () => {
     }
 
     updateOsDialog.value = false;
-    showSnackbarSuccess(t('update initiated successfully'));
+    showSnackbarSuccess(t('update initiated successfully'), t('you will get a notification once it is complete and the system can be rebooted'));
   } catch (e) {
     const [userMessage, apiErrorMessage] = e.message.split('|$|');
     showSnackbarError(userMessage, apiErrorMessage);
@@ -1067,18 +1093,33 @@ const openSupportDialog = () => {
   supportDialog.showEnterCode = false;
   supportDialog.supportCode = '';
 };
-const openUpdateOsDialog = () => {
-  updateOsDialog.value = true;
-  clearUpdateOsDialog();
+
+const onChannelChange = async () => {
+  await nextTick();
+  if (getMosReleasesOfChannel().length > 0) {
+    updateOsDialog.release = 'latest';
+  }
 };
-const clearUpdateOsDialog = () => {
-  updateOsDialog.release = null;
-  updateOsDialog.channel = null;
+
+const openUpdateOsDialog = async () => {
   updateOsDialog.update_kernel = true;
   updateOsDialog.update_plugins = true;
+  updateOsDialog.value = true;
+  updateOsDialog.channel = null;
+  updateOsDialog.release = null;
+  updateOsDialog.loading = true;
+  await getMosReleases();
+  updateOsDialog.loading = false;
+  updateOsDialog.channel = osInfo.value?.mos?.channel || null;
+  updateOsDialog.release = 'latest';
 };
-const openUpdateKernelDialog = () => {
+const openUpdateKernelDialog = async () => {
   updateKernelDialog.value = true;
+  updateKernelDialog.version = null;
+  updateKernelDialog.loading = true;
+  await getMosKernel();
+  updateKernelDialog.loading = false;
+  updateKernelDialog.version = 'recommended';
 };
 </script>
 
@@ -1104,8 +1145,8 @@ const openUpdateKernelDialog = () => {
   .card {
     border-color: rgba(0, 0, 0, 0.15);
   }
-  :global(.v-theme--dark) .card {
-    border-color: rgba(255, 255, 255, 0.28);
-  }
+:global(.v-theme--dark .card) {
+  border-color: rgba(255, 255, 255, 0.28);
+}
 }
 </style>

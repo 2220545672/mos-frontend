@@ -21,6 +21,7 @@
                   <th style="min-width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('description') }}</th>
                   <th style="min-width: 40px; padding: 4px 8px; vertical-align: middle">{{ $t('cpu load') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('disks') }}</th>
+                  <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('port') }}</th>
                   <th style="width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('autostart') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle">{{ $t('info') }}</th>
@@ -123,6 +124,14 @@
                     </div>
                     <span v-else>-</span>
                   </td>
+                  <td style="padding: 4px 8px; vertical-align: middle">
+                    <div class="d-flex align-center ga-1">
+                      <span v-if="vm.storage_size_human" class="text-caption">{{ vm.storage_size_human }}</span>
+                      <v-btn variant="text" icon size="x-small" :loading="vm.calculating_storage" @click.stop="calculateVMSize(vm)" :title="$t('calculate directory size')" color="primary">
+                        <v-icon size="16">mdi-calculator</v-icon>
+                      </v-btn>
+                    </div>
+                  </td>
                   <td style="padding: 4px 8px; vertical-align: middle">{{ vm.state === 'running' ? vm.vncPort || '-' : '-' }}</td>
                   <td style="padding: 4px 8px; vertical-align: middle">
                     <v-switch v-model="vm.autostart" color="green" hide-details density="compact" @change="switchAutostart(vm)" />
@@ -195,39 +204,55 @@
             />
           </v-col>
           <v-col v-if="vmSettings.hugepages?.enabled" cols="auto" class="d-flex flex-column justify-center align-center">
-            <v-checkbox
-              v-model="newVm.hugepages"
-              hide-details
-              density="compact"
-            />
+            <v-checkbox v-model="newVm.hugepages" hide-details density="compact" />
             <small class="text-center mt-0">{{ $t('Hugepages') }}</small>
           </v-col>
         </v-row>
-        <details>
-          <summary style="cursor: pointer; color: var(--v-theme-primary); text-decoration: underline" class="text-body-2 mb-0">{{ $t('core pinning') }}</summary>
-          <v-row v-for="(core, i) in (cpu.cores || []).filter((c) => c.isPhysical)" :key="i" density="comfortable" class="align-center flex-wrap ga-2" no-gutters>
-            <v-col cols="auto" class="py-0">
-              <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
-                <v-checkbox v-model="newVm.selectedCores" :name="`core-${core.number}`" :value="core.number" hide-details density="compact" />
-                <div class="core-label text-body-2">
-                  <small>
-                    <b>Core-{{ core.number }}</b>
-                  </small>
-                </div>
-              </div>
-            </v-col>
-            <v-col cols="auto" class="py-0" v-for="(thread, ti) in (cpu.cores || []).filter((c) => c.isHyperThreaded && c.physicalCoreNumber === core.number)" :key="ti">
-              <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
-                <v-checkbox v-model="newVm.selectedCores" :name="`thread-${thread.number}`" :value="thread.number" hide-details density="compact" />
-                <div class="core-label text-body-2">
-                  <small>
-                    <b>Ht-{{ thread.number }}</b>
-                  </small>
-                </div>
-              </div>
+        <v-divider class="my-4" />
+        <!-- Cpu Configuration -->
+        <div class="mb-4">
+          <v-row>
+            <v-col cols="12" class="d-flex align-center justify-space-between">
+              <span class="text-title-medium font-weight-bold">{{ $t('cpu') }}</span>
             </v-col>
           </v-row>
-        </details>
+          <v-slider
+            :model-value="newVm.selectedCores.length"
+            @update:model-value="selectFirstNCores"
+            :label="$t('cores')"
+            min="0"
+            :max="(cpu.cores || []).length || 0"
+            step="1"
+            thumb-label="always"
+            variant="outlined"
+          />
+          <details>
+            <summary style="cursor: pointer; color: var(--v-theme-primary); text-decoration: underline" class="text-body-2 mb-0">{{ $t('core pinning') }}</summary>
+            <v-row v-for="(core, i) in (cpu.cores || []).filter((c) => c.isPhysical)" :key="i" density="comfortable" class="align-center flex-wrap ga-2" no-gutters>
+              <v-col cols="auto" class="py-0">
+                <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
+                  <v-checkbox v-model="newVm.selectedCores" :name="`core-${core.number}`" :value="core.number" hide-details density="compact" />
+                  <div class="core-label text-body-2">
+                    <small>
+                      <b>Core-{{ core.number }}</b>
+                    </small>
+                  </div>
+                </div>
+              </v-col>
+              <v-col cols="auto" class="py-0" v-for="(thread, ti) in (cpu.cores || []).filter((c) => c.isHyperThreaded && c.physicalCoreNumber === core.number)" :key="ti">
+                <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
+                  <v-checkbox v-model="newVm.selectedCores" :name="`thread-${thread.number}`" :value="thread.number" hide-details density="compact" />
+                  <div class="core-label text-body-2">
+                    <small>
+                      <b>Ht-{{ thread.number }}</b>
+                    </small>
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
+          </details>
+        </div>
+        <v-divider class="my-4" />
         <v-select v-model="newVm.machineTypeArchitecture" :items="availableMachineTypeArchitectures" :label="$t('machine type')" variant="outlined" class="mt-8 mb-3" />
         <v-select
           v-if="newVm.machineTypeArchitecture"
@@ -500,7 +525,7 @@
   <v-dialog v-model="editVmDialog" max-width="800">
     <v-card class="pa-0" :title="$t('edit vm')" prepend-icon="mdi-pencil">
       <v-card-text style="overflow: auto">
-        <v-alert type="warning" variant="tonal" density="compact" class="mb-4">
+        <v-alert type="warning" variant="tonal" density="compact" class="mb-2" style="font-size: 0.875rem" icon="mdi-alert-circle" :icon-size="20">
           {{ $t('Custom XML changes will be overwritten by this dialog') }}
         </v-alert>
         <v-text-field v-model="editedVm.name" :label="$t('name')" variant="outlined" class="my-2" hide-details="auto" readonly>
@@ -554,39 +579,56 @@
             />
           </v-col>
           <v-col v-if="vmSettings.hugepages?.enabled" cols="auto" class="d-flex flex-column justify-center align-center ml-3">
-            <v-checkbox
-              v-model="editedVm.hugepages"
-              hide-details
-              density="compact"
-            />
+            <v-checkbox v-model="editedVm.hugepages" hide-details density="compact" />
             <small class="text-center mt-0">{{ $t('Hugepages') }}</small>
           </v-col>
         </v-row>
-        <details>
-          <summary style="cursor: pointer; color: var(--v-theme-primary); text-decoration: underline" class="text-body-2 mb-0">{{ $t('core pinning') }}</summary>
-          <v-row v-for="(core, i) in (cpu.cores || []).filter((c) => c.isPhysical)" :key="i" density="comfortable" class="align-center flex-wrap ga-2" no-gutters>
-            <v-col cols="auto" class="py-0">
-              <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
-                <v-checkbox v-model="editedVm.selectedCores" :name="`core-${core.number}`" :value="core.number" hide-details density="compact" />
-                <div class="core-label text-body-2">
-                  <small>
-                    <b>Core-{{ core.number }}</b>
-                  </small>
-                </div>
-              </div>
-            </v-col>
-            <v-col cols="auto" class="py-0" v-for="(thread, ti) in (cpu.cores || []).filter((c) => c.isHyperThreaded && c.physicalCoreNumber === core.number)" :key="ti">
-              <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
-                <v-checkbox v-model="editedVm.selectedCores" :name="`thread-${thread.number}`" :value="thread.number" hide-details density="compact" />
-                <div class="core-label text-body-2">
-                  <small>
-                    <b>Ht-{{ thread.number }}</b>
-                  </small>
-                </div>
-              </div>
+        <v-divider class="my-4" />
+        <!-- Cpu Configuration -->
+        <div class="mb-4">
+          <v-row>
+            <v-col cols="12" class="d-flex align-center justify-space-between">
+              <span class="text-title-medium font-weight-bold">{{ $t('cpu') }}</span>
             </v-col>
           </v-row>
-        </details>
+          <v-slider
+            :model-value="editedVm.selectedCores.length"
+            @update:model-value="selectFirstNCoresEdit"
+            :label="$t('cores')"
+            min="0"
+            :max="(cpu.cores || []).length || 0"
+            step="1"
+            thumb-label="always"
+            variant="outlined"
+            class="mb-4"
+          />
+          <details>
+            <summary style="cursor: pointer; color: var(--v-theme-primary); text-decoration: underline" class="text-body-2 mb-0">{{ $t('core pinning') }}</summary>
+            <v-row v-for="(core, i) in (cpu.cores || []).filter((c) => c.isPhysical)" :key="i" density="comfortable" class="align-center flex-wrap ga-2" no-gutters>
+              <v-col cols="auto" class="py-0">
+                <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
+                  <v-checkbox v-model="editedVm.selectedCores" :name="`core-${core.number}`" :value="core.number" hide-details density="compact" />
+                  <div class="core-label text-body-2">
+                    <small>
+                      <b>Core-{{ core.number }}</b>
+                    </small>
+                  </div>
+                </div>
+              </v-col>
+              <v-col cols="auto" class="py-0" v-for="(thread, ti) in (cpu.cores || []).filter((c) => c.isHyperThreaded && c.physicalCoreNumber === core.number)" :key="ti">
+                <div class="core-row" style="min-width: 0; display: flex; align-items: center; gap: 6px">
+                  <v-checkbox v-model="editedVm.selectedCores" :name="`thread-${thread.number}`" :value="thread.number" hide-details density="compact" />
+                  <div class="core-label text-body-2">
+                    <small>
+                      <b>Ht-{{ thread.number }}</b>
+                    </small>
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
+          </details>
+        </div>
+        <v-divider class="my-4" />
         <v-select v-model="editedVm.machineTypeArchitecture" :items="availableMachineTypeArchitectures" :label="$t('machine type')" variant="outlined" class="mt-8 mb-3" />
         <v-select
           v-if="editedVm.machineTypeArchitecture"
@@ -849,7 +891,7 @@
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
         <v-btn color="onPrimary" @click="editVmDialog = false">{{ $t('cancel') }}</v-btn>
-        <v-btn color="onPrimary" @click="editVM()">{{ $t('save changes') }}</v-btn>
+        <v-btn color="onPrimary" @click="editVM()">{{ $t('save') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -864,7 +906,7 @@
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
         <v-btn @click="editXmlDialog = false">{{ $t('cancel') }}</v-btn>
-        <v-btn color="primary" @click="changeXml()">{{ $t('save changes') }}</v-btn>
+        <v-btn color="onPrimary" @click="changeXml()">{{ $t('save') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -892,8 +934,16 @@
 
   <!-- VM Info Dialog -->
   <v-dialog v-model="infoDialog" max-width="700">
-    <v-card class="pa-0">
-      <v-card-title>{{ infoDialogData.name }}</v-card-title>
+    <v-card class="pa-0" :title="infoDialogData.name">
+      <template #prepend>
+        <v-img :src="getVmIconSrc(infoDialogData)" alt="vm icon" width="40" height="40" class="rounded">
+          <template #error>
+            <v-sheet class="d-flex align-center justify-center" height="100%" width="100%">
+              <v-icon color="grey-darken-1">mdi-image-off</v-icon>
+            </v-sheet>
+          </template>
+        </v-img>
+      </template>
       <v-card-text style="overflow: auto; max-height: 70vh">
         <v-skeleton-loader v-if="infoDialogLoading" />
         <template v-else>
@@ -1085,7 +1135,6 @@
       </v-list-item>
     </v-list>
   </v-menu>
-
 </template>
 
 <script setup>
@@ -1093,6 +1142,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
 import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
 import { io } from 'socket.io-client';
 import fsNavigatorDialog from '@/components/fsNavigatorDialog.vue';
 import xmlEditor from '@/components/xmlEditor.vue';
@@ -1102,6 +1152,7 @@ const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
 const vms = ref([]);
 const vmUsage = ref([]);
 const { overlay } = useOverlay();
+const { call } = useApi();
 const { t } = useI18n();
 const vmsloading = ref(true);
 const searchTerm = ref('');
@@ -1231,16 +1282,12 @@ onUnmounted(() => {
 
 const getVMs = async () => {
   try {
-    const res = await fetch('/api/v1/vm/machines', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/vm/machines', {
+      errorLabel: t('Could not fetch VMs'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    vms.value = await res.json();
+    vms.value = result;
   } catch (e) {
-    showSnackbarError(t('Could not fetch VMs'));
   } finally {
     vmsloading.value = false;
   }
@@ -1248,16 +1295,12 @@ const getVMs = async () => {
 
 const getVmUsage = async () => {
   try {
-    const res = await fetch('/api/v1/vm/machines/usage', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/vm/machines/usage', {
+      errorLabel: t('Could not fetch VM usage'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    vmUsage.value = await res.json();
+    vmUsage.value = result;
   } catch (e) {
-    showSnackbarError(t('Could not fetch VM usage'));
   }
 };
 
@@ -1297,7 +1340,8 @@ const getLoadWS = () => {
     return;
   }
 
-  socket = io('/vm', {
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/vm` : '/vm', {
     path: '/api/v1/socket.io/',
     transports: ['websocket'],
     upgrade: false,
@@ -1327,21 +1371,15 @@ const getLoadWS = () => {
 
 const openVnc = async (vmName) => {
   try {
-    const res = await fetch('/api/v1/vm/vnc/token', {
+    const result = await call('/api/v1/vm/vnc/token', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ vmName }),
+      body: { vmName },
+      errorLabel: t('vnc connection failed'),
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to get VNC token');
-    }
+    if (!result) return;
 
-    const { wsPath, token } = await res.json();
+    const { wsPath, token } = result;
 
     const vm = vms.value.find((v) => v.name === vmName);
     let iconUrl = '';
@@ -1366,204 +1404,105 @@ const openVnc = async (vmName) => {
 
     window.open(url, `vnc-${vmName}`, `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`);
   } catch (err) {
-    showSnackbarError(t('vnc connection failed'), err.message);
   }
 };
 
 const stopVM = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${name}/stop`, {
+    await call(`/api/v1/vm/machines/${name}/stop`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be stopped'),
+      successLabel: t('VM shutdown initiated'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM shutdown initiated'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const startVM = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${name}/start`, {
+    await call(`/api/v1/vm/machines/${name}/start`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be started'),
+      successLabel: t('VM started successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be started')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM started successfully'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const killVM = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${name}/kill`, {
+    await call(`/api/v1/vm/machines/${name}/kill`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be killed'),
+      successLabel: t('VM killed successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be killed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM killed successfully'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const resetVM = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${name}/reset`, {
+    await call(`/api/v1/vm/machines/${name}/reset`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be reset'),
+      successLabel: t('VM reset successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be reset')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM reset successfully'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const restartVM = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${name}/restart`, {
+    await call(`/api/v1/vm/machines/${name}/restart`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be restarted'),
+      successLabel: t('VM restarted successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be restarted')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM restarted successfully'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const openEditXmlDialog = async (name) => {
   try {
-    const res = await fetch(`/api/v1/vm/machines/${name}/xml`, {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call(`/api/v1/vm/machines/${name}/xml`, {
+      errorLabel: t('Could not fetch XML'),
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    const data = await res.json();
     editXmlVmData.value.xml = data.xml;
     editXmlVmData.value.name = name;
     editXmlDialog.value = true;
   } catch (e) {
-    showSnackbarError(t('Could not fetch XML'));
   }
 };
 
 const changeXml = async () => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/xml/validate`, {
+    await call(`/api/v1/vm/xml/validate`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ xml: editXmlVmData.value.xml }),
+      body: { xml: editXmlVmData.value.xml },
+      errorLabel: t('XML could not be validated'),
+      successLabel: t('XML validated successfully'),
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('XML could not be validated')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('XML validated successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
     const payload = {
       name: editXmlVmData.value.name,
       xml: editXmlVmData.value.xml,
     };
-    try {
-      const res = await fetch(`/api/v1/vm/machines/${editXmlVmData.value.name}/xml`, {
-        method: 'PUT',
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    
+    await call(`/api/v1/vm/machines/${editXmlVmData.value.name}/xml`, {
+      method: 'PUT',
+      body: payload,
+      errorLabel: t('XML could not be changed'),
+      successLabel: t('XML changed successfully'),
+    });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(`${t('XML could not be changed')}|$| ${error.error || t('unknown error')}`);
-      }
-
-      showSnackbarSuccess(t('XML changed successfully'));
-      getVMs();
-    } catch (e) {
-      const [userMessage, apiErrorMessage] = e.message.split('|$|');
-      showSnackbarError(userMessage, apiErrorMessage);
-    } finally {
-      overlay.value = false;
-      editXmlDialog.value = false;
-    }
+    getVMs();
+    editXmlDialog.value = false;
+  } catch (e) {
   }
 };
 
@@ -1573,16 +1512,11 @@ const openInfoDialog = async (name) => {
   infoDialog.value = true;
 
   try {
-    const res = await fetch(`/api/v1/vm/machines/${name}/config`, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call(`/api/v1/vm/machines/${name}/config`, {
+      errorLabel: t('Could not fetch VM config'),
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    infoDialogData.value = await res.json();
+    infoDialogData.value = data;
   } catch (e) {
-    showSnackbarError(t('Could not fetch VM config'));
     infoDialog.value = false;
   } finally {
     infoDialogLoading.value = false;
@@ -1600,9 +1534,8 @@ const openDeleteVmDialog = (name) => {
 
 const deleteVM = async () => {
   try {
-    overlay.value = true;
-
-    const url = new URL(`/api/v1/vm/machines/${deleteVmData.value.name}`, window.location.origin);
+    const baseUrl = __API_BASE_URL__ || window.location.origin;
+    const url = new URL(`/api/v1/vm/machines/${deleteVmData.value.name}`, baseUrl);
     if (deleteVmData.value.removeDisks) {
       url.searchParams.set('removeDisks', 'true');
     }
@@ -1610,127 +1543,96 @@ const deleteVM = async () => {
       url.searchParams.set('removeNvram', 'true');
     }
 
-    const res = await fetch(url.toString(), {
+    await call(url.pathname + url.search, {
       method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('VM could not be deleted'),
+      successLabel: t('VM deleted successfully'),
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be deleted')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM deleted successfully'));
     getVMs();
     deleteVmDialog.value = false;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const switchAutostart = async (vm) => {
-  const autostartBody = { enabled: vm.autostart };
-
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${vm.name}/autostart`, {
+    await call(`/api/v1/vm/machines/${vm.name}/autostart`, {
       method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(autostartBody),
+      body: { enabled: vm.autostart },
+      errorLabel: t('could not switch autostart'),
+      successLabel: t('autostart setting updated'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('could not switch autostart')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('autostart setting updated'));
     getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
+  }
+};
+
+const calculateVMSize = async (vm) => {
+  try {
+    vm.calculating_storage = true;
+    const result = await call(`/api/v1/vm/machines/${vm.name}/calc`, {
+      errorLabel: t('error calculating directory size'),
+      successLabel: t('directory size calculated'),
+    });
+    vm.storage_size_human = result.total_size_human;
+  } catch (e) {
   } finally {
-    overlay.value = false;
+    vm.calculating_storage = false;
   }
 };
 
 const getSystemInfo = async () => {
   try {
-    const res = await fetch('/api/v1/system/load', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call('/api/v1/system/load', {
+      errorLabel: t('Could not fetch memory info'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    systemInfo.value = await res.json();
-    availableSystemMemory.value = Math.floor(systemInfo.value.memory.total / (1024 * 1024 * 1024));
-    cpu.value = systemInfo.value.cpu;
+    systemInfo.value = data;
+    availableSystemMemory.value = Math.floor(data.memory.total / (1024 * 1024 * 1024));
+    cpu.value = data.cpu;
   } catch (e) {
-    showSnackbarError(t('Could not fetch memory info'));
   }
 };
 
 const getPCIeDevices = async () => {
   try {
-    const res = await fetch('/api/v1/system/devices/pci', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const pcieDevicesRaw = await call('/api/v1/system/devices/pci', {
+      errorLabel: t('Could not fetch PCIe devices'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    const pcieDevicesRaw = await res.json();
     pcieDevices.value = pcieDevicesRaw.reduce((reduced, dev) => {
       const fullAddress = dev.slot.includes(':') && dev.slot.split(':')[0].length === 2 ? `0000:${dev.slot}` : dev.slot;
       reduced[fullAddress] = `${dev.class} ${dev.name} (${dev.vendor})`;
       return reduced;
     }, {});
   } catch (e) {
-    showSnackbarError(t('Could not fetch PCIe devices'));
   }
 };
 
 const getUSBDevices = async () => {
   try {
-    const res = await fetch('/api/v1/system/devices/usb', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const usbDevicesRaw = await call('/api/v1/system/devices/usb', {
+      errorLabel: t('Could not fetch USB devices'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    const usbDevicesRaw = await res.json();
     usbDevices.value = usbDevicesRaw.reduce((reduced, dev) => {
       const key = `${dev.vendor_id}:${dev.product_id}`;
       reduced[key] = dev.description;
       return reduced;
     }, {});
   } catch (e) {
-    showSnackbarError(t('Could not fetch USB devices'));
   }
 };
 
 const getVmCapabilities = async () => {
   try {
-    const res = await fetch('/api/v1/vm/capabilities', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call('/api/v1/vm/capabilities', {
+      errorLabel: t('Could not fetch VM capabilities'),
+      showOverlay: false,
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    vmCapabilities.value = await res.json();
+    vmCapabilities.value = data;
   } catch (e) {
-    showSnackbarError(t('Could not fetch VM capabilities'));
   }
 };
 
@@ -1869,14 +1771,9 @@ const openCreateVmDialog = async () => {
 };
 const openEditVmDialog = async (name) => {
   try {
-    const res = await fetch(`/api/v1/vm/machines/${name}/config`, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call(`/api/v1/vm/machines/${name}/config`, {
+      errorLabel: t('Could not fetch VM config'),
     });
-
-    if (!res.ok) throw new Error('API-Error');
-    const data = await res.json();
 
     let memorySize = 1;
     if (data.memoryHuman) {
@@ -1929,7 +1826,6 @@ const openEditVmDialog = async (name) => {
 
     editVmDialog.value = true;
   } catch (e) {
-    showSnackbarError(t('Could not fetch VM config'));
   }
 };
 
@@ -1941,6 +1837,16 @@ const recalculateBootOrder = () => {
     .forEach((device, index) => {
       device.item.boot_order = index + 1;
     });
+};
+
+const selectFirstNCores = (count) => {
+  const allCores = (cpu.value.cores || []).map((c) => c.number).sort((a, b) => a - b);
+  newVm.value.selectedCores = allCores.slice(0, count);
+};
+
+const selectFirstNCoresEdit = (count) => {
+  const allCores = (cpu.value.cores || []).map((c) => c.number).sort((a, b) => a - b);
+  editedVm.value.selectedCores = allCores.slice(0, count);
 };
 
 const addDisk = () => {
@@ -2169,29 +2075,15 @@ const createVM = async () => {
   };
 
   try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/vm/machines', {
+    await call('/api/v1/vm/machines', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('VM could not be created'),
+      successLabel: t('VM created successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be created')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM created successfully'));
     createVmDialog.value = false;
     await getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -2256,49 +2148,25 @@ const editVM = async () => {
   };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/vm/machines/${editedVm.value.name}/config`, {
+    await call(`/api/v1/vm/machines/${editedVm.value.name}/config`, {
       method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('VM could not be edited'),
+      successLabel: t('VM edited successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('VM could not be edited')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('VM edited successfully'));
     editVmDialog.value = false;
     await getVMs();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const getVMService = async () => {
   try {
-    const res = await fetch('/api/v1/mos/settings/vm', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call('/api/v1/mos/settings/vm', {
+      errorLabel: t('vm service could not be loaded'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('vm service could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    vmSettings.value = await res.json();
+    vmSettings.value = data;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   }
 };
 

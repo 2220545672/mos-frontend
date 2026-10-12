@@ -4,7 +4,17 @@ import path from 'path';
 import federation from '@originjs/vite-plugin-federation';
 import { VitePWA } from 'vite-plugin-pwa';
 
+// Target configuration
+const API_TARGET = 'http://mos-test.home';
+const WS_TARGET = 'ws://mos-test.home';
+
 export default defineConfig({
+  define: {
+    __API_BASE_URL__: JSON.stringify(process.env.VITE_API_BASE_URL || (process.env.NODE_ENV === 'development' ? API_TARGET : '')),
+    __WS_BASE_URL__: JSON.stringify(process.env.VITE_WS_BASE_URL || (process.env.NODE_ENV === 'development' ? WS_TARGET : '')),
+    __BUNDLED_DEV__: true,
+    __SERVER_FORWARD_CONSOLE__: false,
+  },
   plugins: [
     vue(),
     federation({
@@ -21,32 +31,27 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB
       },
       manifest: {
+        id: '/',
         name: 'MOS',
         short_name: 'MOS',
         description: 'MOS - Modular Operation System',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
         icons: [
           {
             src: '/icons/icon_light_small.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: '/icons/icon_light_large.png',
             sizes: '512x512',
             type: 'image/png',
-          },
-          {
-            src: '/icons/icon_dark_small.png',
-            sizes: '192x192',
-            type: 'image/png',
-            media: '(prefers-color-scheme: dark)',
-          },
-          {
-            src: '/icons/icon_dark_large.png',
-            sizes: '512x512',
-            type: 'image/png',
-            media: '(prefers-color-scheme: dark)',
+            purpose: 'any',
           },
         ],
       },
@@ -57,30 +62,30 @@ export default defineConfig({
     port: 80,
     proxy: {
       '^/api/(?!v1/socket\\.io)': {
-        target: 'http://mos-test.home',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/api/v1/socket.io': {
-        target: 'http://mos-test.home',
+        target: API_TARGET,
         changeOrigin: true,
         ws: true,
       },
       '/ws': {
-        target: 'ws://mos-test.home',
+        target: WS_TARGET,
         ws: true,
       },
       '/api/v1/notify': {
-        target: 'http://mos-test.home',
+        target: API_TARGET,
         changeOrigin: true,
         ws: true,
       },
       '/api/v1/vm/vnc/ws': {
-        target: 'ws://mos-test.home',
+        target: WS_TARGET,
         changeOrigin: true,
         ws: true,
       },
       '/_plugins': {
-        target: 'http://mos-test.home',
+        target: API_TARGET,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/_plugins/, '/plugins'),
       },
@@ -88,7 +93,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   build: {

@@ -739,7 +739,7 @@ const getBinFmtArchitectures = async () => {
 
 const getInterfaces = async () => {
   try {
-    const res = await fetch('/api/v1/mos/system/network/interfaces', {
+    const res = await fetch('/api/v1/mos/system/network/interfaces?include=tun', {
       headers: {
         Authorization: 'Bearer ' + localStorage.getItem('authToken'),
       },

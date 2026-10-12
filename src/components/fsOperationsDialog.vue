@@ -110,7 +110,8 @@ const connect = () => {
 
   cleanupSocket();
 
-  socket = io('/fileoperations', { path: '/api/v1/socket.io/', transports: ['websocket'], upgrade: false });
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/fileoperations` : '/fileoperations', { path: '/api/v1/socket.io/', transports: ['websocket'], upgrade: false });
 
   socket.on('connect', () => {
     socket.emit('subscribe-all', { token: authToken });

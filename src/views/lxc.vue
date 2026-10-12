@@ -22,6 +22,7 @@
                   <th style="min-width: 160px; padding: 4px 8px; vertical-align: middle">{{ $t('backups') }} / {{ $t('snapshots') }}</th>
                   <th style="min-width: 100px; padding: 4px 8px; vertical-align: middle">{{ $t('cpu') }}</th>
                   <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('memory') }}</th>
+                  <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
                   <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('ip') }}</th>
                   <th style="width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('autostart') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle"></th>
@@ -34,63 +35,60 @@
                     <td style="padding: 4px 8px; vertical-align: middle">
                       <v-menu>
                         <template #activator="{ props }">
-                          <v-img class="drag-handle" v-bind="props" :src="getLxcIconSrc(lxc)" alt="lxc image" width="24" height="24" style="cursor: pointer">
+                          <v-img v-if="!lxc.invalid_config" class="drag-handle" v-bind="props" :src="getLxcIconSrc(lxc)" alt="lxc image" width="24" height="24" style="cursor: pointer">
                             <template #error>
                               <v-sheet class="d-flex align-center justify-center" height="100%" width="100%">
                                 <v-icon color="grey-darken-1">mdi-image-off</v-icon>
                               </v-sheet>
                             </template>
                           </v-img>
+                          <v-sheet v-else class="d-flex align-center justify-center" height="100%" width="100%">
+                            <v-icon color="red" v-bind="props" class="drag-handle" alt="lxc image" width="24" height="24" style="cursor: pointer">mdi-file-alert</v-icon>
+                          </v-sheet>
                         </template>
 
                         <v-list>
-                          <v-list-item v-if="checkWebui(lxc)" @click="showWebui(lxc)">
+                          <v-list-item v-if="checkWebui(lxc)" @click="showWebui(lxc)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-web</v-icon></template>
                             <v-list-item-title>{{ $t('web ui') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'running'" @click="openTerminal(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'running'" @click="openTerminal(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-console</v-icon></template>
                             <v-list-item-title>{{ $t('terminal') }}</v-list-item-title>
                           </v-list-item>
-
                           <v-divider />
-
-                          <v-list-item v-if="lxc.state !== 'running'" @click="startLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state !== 'running'" @click="startLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-play-circle</v-icon></template>
                             <v-list-item-title>{{ $t('start') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'running'" @click="stopLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'running'" @click="stopLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-stop-circle</v-icon></template>
                             <v-list-item-title>{{ $t('stop') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'running'" @click="killLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'running'" @click="killLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-close-octagon</v-icon></template>
                             <v-list-item-title>{{ $t('kill') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'running'" @click="restartLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'running'" @click="restartLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-restart</v-icon></template>
                             <v-list-item-title>{{ $t('restart') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'running'" @click="freezeLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'running'" @click="freezeLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-snowflake</v-icon></template>
                             <v-list-item-title>{{ $t('freeze') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item v-if="lxc.state === 'frozen'" @click="unfreezeLXC(lxc.name)">
+                          <v-list-item v-if="lxc.state === 'frozen'" @click="unfreezeLXC(lxc.name)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-snowflake-off</v-icon></template>
                             <v-list-item-title>{{ $t('unfreeze') }}</v-list-item-title>
                           </v-list-item>
-
-                          <v-list-item @click="openDeleteDialog(lxc)">
+                          <v-list-item @click="openDeleteDialog(lxc)" :disabled="lxc.invalid_config">
                             <template #prepend><v-icon>mdi-delete</v-icon></template>
                             <v-list-item-title>{{ $t('delete') }}</v-list-item-title>
                           </v-list-item>
-
+                          <v-list-item v-if="lxc.state === 'stopped'" @click="openMountsDialog(lxc)" :disabled="lxc.invalid_config">
+                            <template #prepend><v-icon>mdi-database</v-icon></template>
+                            <v-list-item-title>{{ $t('mounts') }}</v-list-item-title>
+                          </v-list-item>
                           <v-list-item v-if="lxc.config && lxc.config != ''" @click="openFileEditor(lxc.config)">
                             <template #prepend><v-icon>mdi-text-box-edit</v-icon></template>
                             <v-list-item-title>{{ $t('edit config') }}</v-list-item-title>
@@ -126,6 +124,24 @@
                     </td>
 
                     <td style="padding: 4px 8px; vertical-align: middle">
+                      <div class="d-flex align-center ga-1">
+                        <span v-if="lxc.storage_size_human" class="text-caption">{{ lxc.storage_size_human }}</span>
+                        <v-btn
+                          variant="text"
+                          icon
+                          size="x-small"
+                          :loading="lxc.calculating_storage"
+                          :disabled="lxc.invalid_config"
+                          @click.stop="calculateContainerSize(lxc)"
+                          :title="$t('calculate directory size')"
+                          color="primary"
+                        >
+                          <v-icon size="16">mdi-calculator</v-icon>
+                        </v-btn>
+                      </div>
+                    </td>
+
+                    <td style="padding: 4px 8px; vertical-align: middle">
                       <div class="text-caption-2 mt-1" v-if="Array.isArray(lxc.ipv4) && lxc.ipv4.length">
                         {{ Array.isArray(lxc.ipv4) && lxc.ipv4.length ? lxc.ipv4.join(', ') : '' }}
                       </div>
@@ -150,20 +166,70 @@
   </v-container>
 
   <!-- Create LXC Dialog -->
-  <v-dialog v-model="createDialog.value" max-width="600">
-    <v-card class="pa-0">
-      <v-card-title>{{ $t('create lxc container') }}</v-card-title>
+  <v-dialog v-model="createDialog.value" max-width="700">
+    <v-card class="pa-0" :title="$t('create lxc container')" prepend-icon="mdi-plus">
       <v-card-text>
-        <v-form>
-          <v-text-field v-model="createDialog.name" :label="$t('name')" required />
-          <v-select v-model="createDialog.distribution" :items="images.map((image) => image.name)" :label="$t('distribution')" required />
-          <v-select v-model="createDialog.release" :items="getReleasesfromDistribution(createDialog.distribution)" :label="$t('release')" required />
-          <v-select v-model="createDialog.arch" :items="getArchitectuesfromDistribution(createDialog.distribution, createDialog.release)" :label="$t('architecture')" required />
-          <v-textarea v-model="createDialog.description" :label="$t('description')" rows="2" />
-          <v-switch v-model="createDialog.unprivileged" :label="$t('unprivileged')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
-          <v-switch v-model="createDialog.autostart" :label="$t('autostart')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
-          <v-switch v-model="createDialog.start_after_creation" :label="$t('start after creation')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
-        </v-form>
+        <v-text-field v-model="createDialog.name" :label="$t('name')" required />
+        <v-select v-model="createDialog.distribution" :items="images.map((image) => image.name)" :label="$t('distribution')" :loading="lxcImagesLoading" required />
+        <v-select v-model="createDialog.release" :items="getReleasesfromDistribution(createDialog.distribution)" :label="$t('release')" :loading="lxcImagesLoading" required />
+        <v-select
+          v-model="createDialog.arch"
+          :items="getArchitectuesfromDistribution(createDialog.distribution, createDialog.release)"
+          :label="$t('architecture')"
+          :loading="lxcImagesLoading"
+          required
+        />
+        <v-textarea v-model="createDialog.description" :label="$t('description')" rows="2" />
+        <v-divider class="my-3"></v-divider>
+
+        <div class="d-flex align-center justify-space-between mb-2">
+          <span class="text-subtitle-2">{{ $t('mounts') }}</span>
+          <v-btn variant="text" color="success" size="small" prepend-icon="mdi-plus" @click="createDialog.mounts.push({ source: '', destination: '', readonly: false, type: 'file' })">
+            {{ $t('add') }}
+          </v-btn>
+        </div>
+
+        <v-sheet v-if="!createDialog.mounts.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+          {{ $t('no mounts defined') }}
+        </v-sheet>
+
+        <v-sheet v-for="(mount, i) in createDialog.mounts" :key="i" border rounded class="pa-3 mb-2">
+          <v-row align="center">
+            <v-col cols="12" sm="3">
+              <v-text-field
+                v-model="mount.source"
+                :label="$t('source')"
+                density="compact"
+                variant="outlined"
+                hide-details
+                append-inner-icon="mdi-folder-open"
+                @click:append-inner="
+                  () => {
+                    currentCreateMountIndex = i;
+                    fsDialogVisibleCreate = true;
+                  }
+                "
+              />
+            </v-col>
+            <v-col cols="12" sm="3">
+              <v-text-field v-model="mount.destination" :label="$t('destination')" density="compact" variant="outlined" hide-details />
+            </v-col>
+            <v-col cols="6" sm="2">
+              <v-select v-model="mount.type" :items="['file', 'directory']" :label="$t('type')" density="compact" variant="outlined" hide-details />
+            </v-col>
+            <v-col cols="4" sm="3" class="d-flex justify-center">
+              <v-checkbox v-model="mount.readonly" :label="$t('readonly')" density="compact" hide-details class="flex-grow-0" style="white-space: nowrap" />
+            </v-col>
+            <v-col cols="2" sm="1" class="d-flex justify-end">
+              <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="createDialog.mounts.splice(i, 1)" />
+            </v-col>
+          </v-row>
+        </v-sheet>
+
+        <v-divider class="my-3"></v-divider>
+        <v-switch v-model="createDialog.unprivileged" :label="$t('unprivileged')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
+        <v-switch v-model="createDialog.autostart" :label="$t('autostart')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
+        <v-switch v-model="createDialog.start_after_creation" :label="$t('start after creation')" class="mt-2" inset density="compact" hide-details="auto" color="green" />
       </v-card-text>
       <v-divider />
       <v-card-actions>
@@ -179,9 +245,7 @@
   <!-- Delete LXC Dialog -->
   <v-dialog v-model="deleteDialog.value" max-width="500">
     <v-card class="pa-0">
-      <v-card-title class="text-h6">
-        {{ $t('delete') }} {{ deleteDialog.lxc ? deleteDialog.lxc.name : '' }}
-      </v-card-title>
+      <v-card-title class="text-h6">{{ $t('delete') }} {{ deleteDialog.lxc ? deleteDialog.lxc.name : '' }}</v-card-title>
       <v-card-text>
         {{ $t('are you sure you want to delete this lxc container?') }}
       </v-card-text>
@@ -195,14 +259,103 @@
     </v-card>
   </v-dialog>
 
+  <!-- Mounts Dialog -->
+  <v-dialog v-model="mountsDialog.value" max-width="700">
+    <v-card class="pa-0" :title="$t('mounts')" prepend-icon="mdi-database">
+      <v-card-text>
+        <div class="d-flex align-center justify-space-between mb-2">
+          <span class="text-subtitle-2"></span>
+          <v-btn variant="text" color="success" size="small" prepend-icon="mdi-plus" @click="mountsDialog.lxc?.mounts?.push({ source: '', destination: '', readonly: false, type: 'file' })">
+            {{ $t('add') }}
+          </v-btn>
+        </div>
+
+        <v-sheet v-if="!mountsDialog.lxc || !mountsDialog.lxc.mounts || !mountsDialog.lxc.mounts.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+          {{ $t('no mounts defined') }}
+        </v-sheet>
+
+        <v-sheet v-for="(mount, i) in mountsDialog.lxc ? mountsDialog.lxc.mounts : []" :key="i" border rounded class="pa-3 mb-2">
+          <v-row align="center">
+            <v-col cols="12" sm="3">
+              <v-text-field
+                v-model="mount.source"
+                :label="$t('source')"
+                density="compact"
+                variant="outlined"
+                hide-details
+                append-inner-icon="mdi-folder-open"
+                @click:append-inner="
+                  () => {
+                    currentMountIndex = i;
+                    fsDialogVisible = true;
+                  }
+                "
+              />
+            </v-col>
+            <v-col cols="12" sm="3">
+              <v-text-field v-model="mount.destination" :label="$t('destination')" density="compact" variant="outlined" hide-details />
+            </v-col>
+            <v-col cols="6" sm="2">
+              <v-select v-model="mount.type" :items="['file', 'directory']" :label="$t('type')" density="compact" variant="outlined" hide-details />
+            </v-col>
+            <v-col cols="4" sm="3" class="d-flex justify-center">
+              <v-checkbox v-model="mount.readonly" :label="$t('readonly')" density="compact" hide-details class="flex-grow-0" style="white-space: nowrap" />
+            </v-col>
+            <v-col cols="2" sm="1" class="d-flex justify-end">
+              <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="mountsDialog.lxc?.mounts?.splice(i, 1)" />
+            </v-col>
+          </v-row>
+        </v-sheet>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn text @click="mountsDialog.value = false" color="onPrimary">{{ $t('close') }}</v-btn>
+        <v-btn color="onPrimary" @click="saveMounts(mountsDialog.lxc)" :disabled="!mountsDialog.lxc || !mountsDialog.lxc.mounts || mountsDialog.lxc.mounts.length <= 0">
+          {{ $t('save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <!-- File Edit Dialog -->
   <FileEditDialog v-model="editFileDialogVisible" :path="selectedFilePath" :createBackup="true" :title="$t('edit file')" @saved="onFileSaved" />
+
+  <!-- File System Navigator Dialog -->
+  <FsNavigatorDialog
+    v-model="fsDialogVisible"
+    :initialPath="currentMountIndex >= 0 && mountsDialog.lxc?.mounts?.[currentMountIndex]?.source ? mountsDialog.lxc.mounts[currentMountIndex].source : '/'"
+    :selectType="currentMountIndex >= 0 && mountsDialog.lxc?.mounts?.[currentMountIndex]?.type ? mountsDialog.lxc.mounts[currentMountIndex].type : 'directory'"
+    :title="$t('select path')"
+    @selected="
+      (item) => {
+        if (currentMountIndex >= 0 && mountsDialog.lxc?.mounts?.[currentMountIndex]) {
+          mountsDialog.lxc.mounts[currentMountIndex].source = item.path;
+          fsDialogVisible = false;
+        }
+      }
+    "
+  />
+
+  <!-- File System Navigator Dialog for Create -->
+  <FsNavigatorDialog
+    v-model="fsDialogVisibleCreate"
+    :initialPath="currentCreateMountIndex >= 0 && createDialog.mounts?.[currentCreateMountIndex]?.source ? createDialog.mounts[currentCreateMountIndex].source : '/'"
+    :selectType="currentCreateMountIndex >= 0 && createDialog.mounts?.[currentCreateMountIndex]?.type ? createDialog.mounts[currentCreateMountIndex].type : 'directory'"
+    :title="$t('select path')"
+    @selected="
+      (item) => {
+        if (currentCreateMountIndex >= 0 && createDialog.mounts?.[currentCreateMountIndex]) {
+          createDialog.mounts[currentCreateMountIndex].source = item.path;
+          fsDialogVisibleCreate = false;
+        }
+      }
+    "
+  />
 
   <!-- Floating Action Button -->
   <v-fab @click="openCreateDialog()" color="primary" style="position: fixed; bottom: 32px; right: 32px; z-index: 1000" size="large" icon>
     <v-icon>mdi-plus</v-icon>
   </v-fab>
-
 </template>
 
 <script setup>
@@ -211,16 +364,22 @@ import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import draggable from 'vuedraggable';
 import { useI18n } from 'vue-i18n';
 import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
 import { openTerminalPopup } from '@/composables/terminalpopup';
 import FileEditDialog from '@/components/fileEditDialog.vue';
+import FsNavigatorDialog from '@/components/fsNavigatorDialog.vue';
 import { io } from 'socket.io-client';
 
 const editFileDialogVisible = ref(false);
 const selectedFilePath = ref('');
+const fsDialogVisible = ref(false);
+const currentMountIndex = ref(-1);
+const fsDialogVisibleCreate = ref(false);
+const currentCreateMountIndex = ref(-1);
 const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
 const lxcs = ref([]);
 const images = ref([]);
-const { overlay } = useOverlay();
+const { call } = useApi();
 const { t } = useI18n();
 const createDialog = reactive({
   value: false,
@@ -232,12 +391,18 @@ const createDialog = reactive({
   autostart: false,
   description: '',
   start_after_creation: false,
+  mounts: [],
 });
 const deleteDialog = reactive({
   value: false,
   lxc: null,
 });
+const mountsDialog = reactive({
+  value: false,
+  lxc: null,
+});
 const lxcsLoading = ref(true);
+const lxcImagesLoading = ref(true);
 const searchTerm = ref('');
 const filteredLxcs = computed(() => {
   const term = (searchTerm.value || '').trim().toLowerCase();
@@ -248,7 +413,6 @@ let socket = null;
 
 onMounted(() => {
   getLXCs();
-  getImages();
   getLXCWS();
 });
 
@@ -268,42 +432,21 @@ const onFileSaved = (file) => {};
 
 const getLXCs = async () => {
   try {
-    const [res, mosRes, usageRes] = await Promise.all([
-      fetch('/api/v1/lxc/containers', {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        },
+    const [result, mosResult, usageResult] = await Promise.all([
+      call('/api/v1/lxc/containers', {
+        errorLabel: t('lxc containers could not be loaded'),
+        showOverlay: false,
       }),
-      fetch('api/v1/lxc/mos/containers', {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        },
+      call('/api/v1/lxc/mos/containers', {
+        errorLabel: t('lxc mos data could not be loaded'),
+        showOverlay: false,
       }),
-      fetch('api/v1/lxc/containers/usage', {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        },
+      call('/api/v1/lxc/containers/usage', {
+        errorLabel: t('lxc usage data could not be loaded'),
+        showOverlay: false,
       }),
     ]);
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc containers could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-    if (!mosRes.ok) {
-      const error = await mosRes.json();
-      throw new Error(`${t('lxc mos data could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-    if (!usageRes.ok) {
-      const error = await usageRes.json();
-      throw new Error(`${t('lxc usage data could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const result = await res.json();
-    const mosResult = await mosRes.json();
-    const usageResult = await usageRes.json();
-
-    // Sortiere lxc nach dem Index in mosResult
     if (Array.isArray(mosResult)) {
       result.sort((a, b) => {
         const objA = mosResult.find((item) => item.name === a.name);
@@ -314,13 +457,11 @@ const getLXCs = async () => {
       });
     }
 
-    // Übernehme autostart aus mosResult in result
     result.forEach((lxc) => {
       const mos = mosResult.find((item) => item.name === lxc.name);
       lxc.autostart = mos ? mos.autostart : false;
     });
 
-    // Übernehme usage Daten in result
     result.forEach((lxc) => {
       const usage = usageResult.find((item) => item.name === lxc.name);
       lxc.cpu = usage && usage.cpu ? usage.cpu : {};
@@ -329,8 +470,6 @@ const getLXCs = async () => {
 
     lxcs.value = result;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     lxcsLoading.value = false;
   }
@@ -338,101 +477,49 @@ const getLXCs = async () => {
 
 const getImages = async () => {
   try {
-    const res = await fetch('/api/v1/lxc/images', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const imagesResult = await call('/api/v1/lxc/images', {
+      errorLabel: t('lxc images could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc images could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-    const imagesResult = await res.json();
 
     images.value = Object.keys(imagesResult.distributions).map((key) => ({
       name: key,
       releases: imagesResult.distributions[key],
     }));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch (e) {}
 };
 
 const stopLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/stop`, {
+    await call(`/api/v1/lxc/containers/${name}/stop`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be stopped'),
+      successLabel: t('lxc container stopped successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container stopped successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const startLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/start`, {
+    await call(`/api/v1/lxc/containers/${name}/start`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be started'),
+      successLabel: t('lxc container started successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be started')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container started successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const killLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/kill`, {
+    await call(`/api/v1/lxc/containers/${name}/kill`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be killed'),
+      successLabel: t('lxc container killed successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be killed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container killed successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const createLXC = async () => {
@@ -445,61 +532,36 @@ const createLXC = async () => {
     autostart: createDialog.autostart,
     description: createDialog.description,
     start_after_creation: createDialog.start_after_creation,
+    mounts: createDialog.mounts.map((mount) => ({
+      source: mount.source,
+      destination: mount.destination,
+      readonly: mount.readonly,
+      type: mount.type,
+    })),
   };
 
   try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/lxc/containers/create', {
+    await call('/api/v1/lxc/containers/create', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newLXC),
+      body: newLXC,
+      errorLabel: t('lxc container could not be created'),
+      successLabel: t('lxc container created successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be created')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container created successfully'));
     getLXCs();
-    clearCreateDialog();
     createDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const removeLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}`, {
+    await call(`/api/v1/lxc/containers/${name}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be removed'),
+      successLabel: t('lxc container removed successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be removed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container removed successfully'));
     getLXCs();
-    clearDeleteDialog();
     deleteDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const openTerminal = async (lxcName) => {
@@ -513,185 +575,139 @@ const openTerminal = async (lxcName) => {
 
 const createLXCTerminalSession = async (lxcName) => {
   try {
-    const res = await fetch('/api/v1/terminal/create', {
+    const result = await call('/api/v1/terminal/create', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+      body: {
         command: 'lxc-attach',
         args: ['-n', lxcName],
-      }),
+      },
+      errorLabel: t('failed to create terminal session'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('failed to create terminal session')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const Result = await res.json();
-    return Result.sessionId;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+    return result?.sessionId;
+  } catch (e) {}
 };
 
 const switchAutostart = async (lxc) => {
   const autostart = [{ name: lxc.name, autostart: lxc.autostart }];
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/mos/containers`, {
+    await call(`/api/v1/lxc/mos/containers`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(autostart),
+      body: autostart,
+      errorLabel: t('autostart setting could not be saved'),
+      successLabel: t('autostart setting saved successfully'),
     });
+  } catch (e) {}
+};
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('autostart setting could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('autostart setting saved successfully'));
+const calculateContainerSize = async (lxc) => {
+  try {
+    lxc.calculating_storage = true;
+    const result = await call(`/api/v1/lxc/containers/${lxc.name}/calc`, {
+      errorLabel: t('error calculating directory size'),
+      successLabel: t('directory size calculated'),
+    });
+    lxc.storage_size_human = result.size_human;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
-    overlay.value = false;
+    lxc.calculating_storage = false;
   }
 };
 
 const onDragEnd = async () => {
-  const newOrder = JSON.stringify(
-    lxcs.value.map((lxc, idx) => {
-      const obj = {
-        name: lxc.name,
-        index: idx + 1,
-        autostart: lxc.autostart,
-      };
-      return obj;
-    }),
-  );
+  const newOrder = lxcs.value.map((lxc, idx) => ({
+    name: lxc.name,
+    index: idx + 1,
+    autostart: lxc.autostart,
+  }));
 
   try {
-    const res = await fetch('/api/v1/lxc/mos/containers', {
+    await call('/api/v1/lxc/mos/containers', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
       body: newOrder,
+      errorLabel: t('lxc container order could not be saved'),
+      successLabel: t('lxc container order saved successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container order could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container order saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch (e) {}
 };
 
 const restartLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/restart`, {
+    await call(`/api/v1/lxc/containers/${name}/restart`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be restarted'),
+      successLabel: t('lxc container restarted successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be restarted')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container restarted successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const freezeLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/freeze`, {
+    await call(`/api/v1/lxc/containers/${name}/freeze`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be freezed'),
+      successLabel: t('lxc container freezed successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be freezed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container freezed successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const unfreezeLXC = async (name) => {
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/lxc/containers/${name}/unfreeze`, {
+    await call(`/api/v1/lxc/containers/${name}/unfreeze`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('lxc container could not be unfreezed'),
+      successLabel: t('lxc container unfreezed successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('lxc container could not be unfreezed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('lxc container unfreezed successfully'));
     getLXCs();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch (e) {}
 };
 
 const openDeleteDialog = (lxc) => {
   deleteDialog.value = true;
   deleteDialog.lxc = lxc;
 };
-const clearDeleteDialog = () => {
-  deleteDialog.value = false;
-  deleteDialog.lxc = null;
-};
-const openCreateDialog = () => {
+
+const openCreateDialog = async () => {
   createDialog.value = true;
-};
-const clearCreateDialog = () => {
-  createDialog.value = false;
   createDialog.name = '';
   createDialog.distribution = null;
   createDialog.release = null;
   createDialog.arch = null;
+  await getImages();
+  lxcImagesLoading.value = false;
+};
+
+const openMountsDialog = async (lxc) => {
+  mountsDialog.value = true;
+  mountsDialog.lxc = lxc;
+  if (!mountsDialog.lxc.mounts) {
+    mountsDialog.lxc.mounts = (await getMounts(lxc)) || [];
+  }
+};
+
+const getMounts = async (lxc) => {
+  try {
+    return await call(`/api/v1/lxc/containers/${lxc.name}/mounts`, {
+      errorLabel: t('mounts could not be loaded'),
+    });
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveMounts = async (lxc) => {
+  try {
+    await call(`/api/v1/lxc/containers/${lxc.name}/mounts`, {
+      method: 'PUT',
+      body: lxc.mounts,
+      errorLabel: t('mounts could not be saved'),
+      successLabel: t('mounts saved successfully'),
+    });
+    mountsDialog.value = false;
+    getLXCs();
+  } catch (e) {}
 };
 
 const getLxcIconSrc = (lxc) => {
@@ -726,7 +742,6 @@ const showWebui = (lxc) => {
   if (!lxc.webui) return;
   let webui = lxc.webui;
 
-  // Replace [ADDRESS] with first IPv4 address of the container
   const addressMatch = webui.match(/\[ADDRESS\]/g);
   if (addressMatch) {
     const ipv4 = Array.isArray(lxc.ipv4) && lxc.ipv4.length > 0 ? lxc.ipv4[0] : '';
@@ -736,7 +751,6 @@ const showWebui = (lxc) => {
   window.open(webui, '_blank');
 };
 
-// Websocket to listen for lxc
 const getLXCWS = () => {
   const authToken = localStorage.getItem('authToken');
   if (!authToken) {
@@ -750,7 +764,8 @@ const getLXCWS = () => {
     socket = null;
   }
 
-  socket = io('/lxc', { path: '/api/v1/socket.io/', transports: ['websocket'], upgrade: false });
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/lxc` : '/lxc', { path: '/api/v1/socket.io/', transports: ['websocket'], upgrade: false });
 
   socket.on('connect', () => {
     socket.emit('subscribe-container-usage', { token: authToken });
@@ -773,7 +788,6 @@ const getLXCWS = () => {
 
       if (update.cpu) lxc.cpu = update.cpu;
       if (update.memory) lxc.memory = update.memory;
-
       if (update.network) {
         if (Array.isArray(update.network.ipv4)) lxc.ipv4 = update.network.ipv4;
         if (Array.isArray(update.network.ipv6)) lxc.ipv6 = update.network.ipv6;

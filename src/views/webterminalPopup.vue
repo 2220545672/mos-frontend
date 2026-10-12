@@ -46,7 +46,8 @@ onMounted(() => {
     }
   });
 
-  socket = io('/terminal', { path: '/api/v1/socket.io/' });
+  const wsUrl = __WS_BASE_URL__ || '';
+  socket = io(wsUrl ? `${wsUrl}/terminal` : '/terminal', { path: '/api/v1/socket.io/' });
 
   socket.on('connect', () => {
     term.write(t('connection to mos terminal established') + '\r\n');

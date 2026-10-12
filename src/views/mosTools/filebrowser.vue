@@ -1,5 +1,53 @@
 <template>
   <v-container fluid class="d-flex justify-center">
+    <!-- Bookmarks Sidebar -->
+    <v-navigation-drawer v-model="bookmarksSidePanel.open" location="right" temporary width="350" :scrim="false">
+      <template #prepend>
+        <v-toolbar density="compact" class="bg-transparent">
+          <v-toolbar-title class="text-subtitle-2">{{ $t('bookmarks') }}</v-toolbar-title>
+          <v-btn icon size="small" @click="bookmarksSidePanel.open = false" class="ml-auto">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <v-divider />
+      </template>
+
+      <v-card-text class="pa-2" style="overflow: auto; max-height: calc(100vh - 120px)">
+        <v-alert v-if="bookmarksSidePanel.bookmarks.length === 0" type="info" variant="tonal" density="compact" class="mb-2">
+          {{ $t('no bookmarks found') }}
+        </v-alert>
+        <div v-else>
+          <draggable
+            v-model="bookmarksSidePanel.bookmarks"
+            tag="v-list"
+            :component-data="{ density: 'compact', class: 'pa-0' }"
+            item-key="path"
+            class="bg-transparent"
+            @end="onBookmarksReordered"
+            handle=".drag-handle"
+          >
+            <template #item="{ element: bookmark }">
+              <v-list-item :key="bookmark.path" class="cursor-pointer pa-1" @click="navigateToBookmark(bookmark)">
+                <template #prepend>
+                  <div class="d-flex align-center gap-1">
+                    <v-icon class="drag-handle cursor-grab" color="primary" size="18" style="opacity: 0.6">mdi-drag-vertical</v-icon>
+                    <v-icon color="primary" size="18">mdi-bookmark</v-icon>
+                  </div>
+                </template>
+                <v-list-item-title class="text-subtitle-2">{{ bookmark.name }}</v-list-item-title>
+                <v-list-item-subtitle class="text-caption" style="word-break: break-all">{{ bookmark.path }}</v-list-item-subtitle>
+                <template #append>
+                  <v-btn icon size="x-small" color="error" variant="text" @click.stop="deleteBookmark(bookmark.path)" :loading="bookmarksSidePanel.loading">
+                    <v-icon size="18">mdi-trash-can</v-icon>
+                  </v-btn>
+                </template>
+              </v-list-item>
+            </template>
+          </draggable>
+        </div>
+      </v-card-text>
+    </v-navigation-drawer>
+
     <v-container style="width: 100%; max-width: 1920px" class="pa-0">
       <v-container fluid class="pt-2 pr-0 pl-0 pb-2">
         <v-row>
@@ -20,6 +68,21 @@
                 {{ currentPath || '/' }}
               </v-chip>
               <v-spacer />
+              <!-- Bookmarks Quick Access -->
+              <div v-if="bookmarksSidePanel.bookmarks.length > 0" class="d-none d-md-flex align-center" style="overflow-x: auto; padding: 0 8px; margin-right: 8px; gap: 4px">
+                <v-chip
+                  v-for="bookmark in bookmarksSidePanel.bookmarks"
+                  :key="bookmark.path"
+                  size="small"
+                  color="primary"
+                  variant="tonal"
+                  @click="navigateToBookmark(bookmark)"
+                  class="cursor-pointer flex-shrink-0"
+                >
+                  <v-icon start size="14">mdi-bookmark</v-icon>
+                  {{ bookmark.path }}
+                </v-chip>
+              </div>
               <v-progress-circular v-if="loading" indeterminate size="20" color="primary" />
               <v-btn variant="flat" @click="openAllOperationsDialog()" color="primary" :disabled="loading" size="small">
                 <span class="text-caption">{{ runningProcesses }} {{ $t('operations') }}</span>
@@ -33,7 +96,7 @@
                 <tr style="cursor: pointer; background-color: rgba(0, 0, 0, 0.04)">
                   <th style="width: 20%">{{ t('name') }}</th>
                   <th style="width: 20%">{{ t('path') }}</th>
-                  <th style="width: 10%; min-width: 100px">{{ t('size') }}</th>
+                  <th class="size-column">{{ t('size') }}</th>
                   <th style="width: 10%; min-width: 100px">{{ t('owner') }}</th>
                   <th style="min-width: 30px">{{ t('permissions') }}</th>
                 </tr>
@@ -66,7 +129,22 @@
                     <span class="text-caption">{{ item.displayPath || item.path }}</span>
                   </td>
                   <td>
-                    <span class="text-caption">{{ item.type === 'directory' ? '-' : item.size_human}}</span>
+                    <div class="d-flex align-center ga-1">
+                      <span v-if="item.calculated_size_human" class="text-caption">{{ item.calculated_size_human }}</span>
+                      <span v-else-if="item.type !== 'directory'" class="text-caption">{{ item.size_human }}</span>
+                      <v-btn
+                        v-if="item.type === 'directory'"
+                        variant="text"
+                        icon
+                        size="x-small"
+                        :loading="item.calculating"
+                        @click.stop="calculateDirectorySize(item)"
+                        title="Calculate directory size"
+                        :color="activeItem && activeItem.path === item.path ? 'accent' : 'primary'"
+                      >
+                        <v-icon size="16">mdi-calculator</v-icon>
+                      </v-btn>
+                    </div>
                   </td>
                   <td>
                     <span class="text-caption">{{ item.permissions.owner }}:{{ item.permissions.group }}</span>
@@ -129,7 +207,7 @@
                   <v-icon size="20">mdi-upload</v-icon>
                 </v-btn>
               </template>
-            </v-tooltip>               
+            </v-tooltip>
             <v-divider vertical class="mx-1 align-self-center" style="height: 24px" />
             <v-tooltip :text="$t('copy')" location="top">
               <template #activator="{ props }">
@@ -160,8 +238,15 @@
                 </v-btn>
               </template>
             </v-tooltip>
+            <v-tooltip :text="$t('bookmarks')" location="top">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" variant="text" color="primary" icon @click="openBookmarksDialog()">
+                  <v-icon size="20">mdi-bookmark-outline</v-icon>
+                </v-btn>
+              </template>
+            </v-tooltip>
             <v-spacer />
-              <v-checkbox v-model="includeHiddenFiles" :label="$t('hidden files')" :disabled="loading" hide-details="auto" density="compact" @update:modelValue="loadPath(currentPath)" />
+            <v-checkbox v-model="includeHiddenFiles" :label="$t('hidden files')" :disabled="loading" hide-details="auto" density="compact" @update:modelValue="loadPath(currentPath)" />
           </v-card-actions>
 
           <input ref="uploadInput" class="d-none" type="file" @change="onUploadPicked" />
@@ -375,11 +460,7 @@
   </v-dialog>
 
   <!-- Kontextmenü für Datei/Ordner -->
-  <v-menu
-    v-model="contextMenu.visible"
-    :target="[contextMenu.x, contextMenu.y]"
-    :close-on-content-click="true"
-  >
+  <v-menu v-model="contextMenu.visible" :target="[contextMenu.x, contextMenu.y]" :close-on-content-click="true">
     <v-list>
       <v-list-item v-if="contextMenu.item" density="compact" style="background: rgba(var(--v-theme-primary), 0.08); pointer-events: none">
         <template #prepend>
@@ -403,6 +484,14 @@
       <v-list-item v-if="contextMenu.item && contextMenu.item.type !== 'directory'" @click="downloadFile(contextMenu.item.path)" density="compact">
         <template #prepend><v-icon>mdi-download</v-icon></template>
         <v-list-item-title>{{ $t('download') }}</v-list-item-title>
+      </v-list-item>
+      <v-list-item v-if="contextMenu.item && contextMenu.item.type === 'directory'" @click="calculateDirectorySize(contextMenu.item)" density="compact">
+        <template #prepend><v-icon>mdi-calculator</v-icon></template>
+        <v-list-item-title>{{ $t('calculate directory size') }}</v-list-item-title>
+      </v-list-item>
+      <v-list-item v-if="contextMenu.item && contextMenu.item.type === 'directory'" @click="addDirectoryAsBookmark(contextMenu.item)" density="compact">
+        <template #prepend><v-icon>mdi-bookmark-plus</v-icon></template>
+        <v-list-item-title>{{ $t('add as bookmark') }}</v-list-item-title>
       </v-list-item>
       <v-divider />
       <v-list-item @click="openOperationDialog(contextMenu.item, 'copy')" density="compact">
@@ -439,18 +528,21 @@
 import { ref, computed, watch, onMounted, reactive, onBeforeUnmount, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import FileEditDialog from '@/components/fileEditDialog.vue';
 import fsNavigatorDialog from '@/components/fsNavigatorDialog.vue';
 import fsOperationsDialog from '@/components/fsOperationsDialog.vue';
+import draggable from 'vuedraggable';
 
 const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
 const modelValue = ref(true);
 const selectType = ref('all');
 const roots = ref('');
 const { t } = useI18n();
+const { call } = useApi();
 const loading = ref(false);
-const currentPath = ref('/');
+const currentPath = ref('/mnt');
 const items = ref([]);
 const canGoUp = ref(false);
 const parentPath = ref(null);
@@ -525,11 +617,18 @@ const contextMenu = reactive({
   y: 0,
   item: null,
 });
+const bookmarksSidePanel = reactive({
+  open: false,
+  bookmarks: [],
+  newBookmarkName: '',
+  loading: false,
+});
 let pollInterval = null;
 
 onMounted(() => {
   loadPath(currentPath.value);
   getRunningOperations();
+  loadBookmarks();
   pollInterval = setInterval(() => {
     getRunningOperations();
   }, 3000);
@@ -569,27 +668,16 @@ const loadPath = async (path = '/') => {
       url.searchParams.set('roots', roots.value);
     }
 
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call(url.pathname + url.search, {
+      errorLabel: t('filesystem could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('filesystem could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const data = await res.json();
 
     currentPath.value = data.currentPath || path || '/';
     canGoUp.value = !!data.canGoUp;
     parentPath.value = data.parentPath;
     items.value = Array.isArray(data.items) ? data.items : [];
     activeItem.value = null;
-  } catch (e) {
-    const [mainMessage, detailMessage] = e.message.split('|$|');
-    showSnackbarError(t(mainMessage.trim()), detailMessage ? detailMessage.trim() : '');
   } finally {
     loading.value = false;
   }
@@ -598,29 +686,16 @@ const loadPath = async (path = '/') => {
 const deleteFile = async (path, force = false, recursive = false) => {
   const payload = { path: path, force: force, recursive: recursive };
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/delete`, {
+    await call('/api/v1/mos/delete', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('file could not be deleted'),
+      successLabel: t('successfully deleted'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('file could not be deleted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('successfully deleted'));
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     clearDeleteDialog();
-    overlay.value = false;
   }
 };
 
@@ -636,27 +711,16 @@ const createFolder = async (path, folderName, user = '500', group = '500', permi
   const payload = { path: path + '/' + folderName, user: user, group: group, permissions: permissions };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/createfolder`, {
+    await call('/api/v1/mos/createfolder', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('folder could not be created'),
+      successLabel: t('successfully created folder'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('folder could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('successfully created folder'));
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     createFolderDialog.value = false;
-    overlay.value = false;
   }
 };
 
@@ -672,27 +736,16 @@ const createFile = async (path, fileName, content = '', user = '500', group = '5
   const payload = { path: path + '/' + fileName, content: content, user: user, group: group, permissions: permissions };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/createfile`, {
+    await call('/api/v1/mos/createfile', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('file could not be created'),
+      successLabel: t('successfully created file'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('file could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('successfully created file'));
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     createFileDialog.value = false;
-    overlay.value = false;
   }
 };
 
@@ -704,27 +757,16 @@ const setChmod = async (path, permissions = '777', recursive = false) => {
   const payload = { path: path, permissions: permissions, recursive: recursive };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/chmod`, {
+    await call('/api/v1/mos/chmod', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('permissions could not be set'),
+      successLabel: t('permissions successfully set'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('permissions could not be set')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('permissions successfully set'));
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     setChmodDialog.value = false;
-    overlay.value = false;
   }
 };
 
@@ -736,27 +778,16 @@ const setChown = async (path, user = '500', group = '500', recursive = false) =>
   const payload = { path: path, user: user, group: group, recursive: recursive };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/chown`, {
+    await call('/api/v1/mos/chown', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('ownership could not be set'),
+      successLabel: t('ownership successfully set'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('ownership could not be set')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('ownership successfully set'));
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     setChownDialog.value = false;
-    overlay.value = false;
   }
 };
 
@@ -778,30 +809,19 @@ const startFileOperation = async (operation, source, destination, onConflict = '
   };
 
   try {
-    const res = await fetch(`/api/v1/mos/fileoperations`, {
+    const result = await call('/api/v1/mos/fileoperations', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('process could not be started'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('process could not be started')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const result = await res.json();
-    if (result.instantMove === true) {
+
+    if (result?.instantMove === true) {
       showSnackbarSuccess(t('file operation completed successfully'));
-      reload();
-      return;
     } else {
       showSnackbarSuccess(`${t('process successfully started')}. ${t('it may take a while')}`);
     }
     reload();
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     operationDialog.value = false;
   }
@@ -809,22 +829,12 @@ const startFileOperation = async (operation, source, destination, onConflict = '
 
 const getRunningOperations = async () => {
   try {
-    const res = await fetch(`/api/v1/mos/runningfsoperations`, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const data = await call('/api/v1/mos/runningfsoperations', {
+      errorLabel: t('could not fetch running operations'),
+      showOverlay: false,
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('could not fetch running operations')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const data = await res.json();
-    runningProcesses.value = data.count;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-    return [];
-  }
+    runningProcesses.value = data?.count || 0;
+  } catch (e) {}
 };
 
 const renameFile = async (item, newName) => {
@@ -835,28 +845,17 @@ const renameFile = async (item, newName) => {
   const payload = { destination: item.path, new_name: newName };
 
   try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/mos/rename`, {
+    await call('/api/v1/mos/rename', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('file could not be renamed'),
+      successLabel: t('successfully renamed'),
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('file could not be renamed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('successfully renamed'));
     reload();
     renameFileDialog.value = false;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
   } finally {
     editFileDialogVisible.value = false;
-    overlay.value = false;
   }
 };
 
@@ -1073,14 +1072,143 @@ const openAllOperationsDialog = () => {
   allOperationsDialogVisible.value = true;
 };
 
+const calculateDirectorySize = async (item) => {
+  if (item.type !== 'directory') return;
+
+  try {
+    item.calculating = true;
+    const data = await call('/api/v1/mos/fsnavigator/calc', {
+      method: 'POST',
+      body: { path: item.path },
+      errorLabel: t('error calculating directory size'),
+      successLabel: t('directory size calculated'),
+      showOverlay: false,
+    });
+
+    if (data) {
+      item.calculated_size_human = data.size_human;
+    }
+  } finally {
+    item.calculating = false;
+  }
+};
+
 const openContextMenu = (e, item) => {
   e.preventDefault();
   contextMenu.x = e.clientX;
   contextMenu.y = e.clientY;
   contextMenu.item = item;
   contextMenu.visible = true;
-}
+};
 
+const loadBookmarks = async () => {
+  try {
+    const data = await call('/api/v1/mos/fsnavigator/bookmarks', {
+      errorLabel: t('bookmarks could not be loaded'),
+    });
+    bookmarksSidePanel.bookmarks = data || [];
+  } catch (e) {
+    bookmarksSidePanel.bookmarks = [];
+  }
+};
+
+const openBookmarksDialog = () => {
+  loadBookmarks();
+  bookmarksSidePanel.open = true;
+};
+
+const navigateToBookmark = (bookmark) => {
+  loadPath(bookmark.path);
+  bookmarksSidePanel.open = false;
+};
+
+const addCurrentPathAsBookmark = async () => {
+  if (!bookmarksSidePanel.newBookmarkName.trim()) {
+    showSnackbarError(t('bookmark name cannot be empty'));
+    return;
+  }
+
+  bookmarksSidePanel.loading = true;
+  try {
+    await call('/api/v1/mos/fsnavigator/bookmarks', {
+      method: 'PUT',
+      body: {
+        name: bookmarksSidePanel.newBookmarkName.trim(),
+        path: currentPath.value,
+      },
+      successLabel: t('bookmark created successfully'),
+      errorLabel: t('bookmark could not be created'),
+    });
+
+    bookmarksSidePanel.newBookmarkName = '';
+    await loadBookmarks();
+  } catch (e) {
+    const [userMessage, apiErrorMessage] = String(e?.message || e).split('|$|');
+    showSnackbarError(userMessage, apiErrorMessage);
+  } finally {
+    bookmarksSidePanel.loading = false;
+  }
+};
+
+const deleteBookmark = async (path) => {
+  bookmarksSidePanel.loading = true;
+  try {
+    await call('/api/v1/mos/fsnavigator/bookmarks', {
+      method: 'DELETE',
+      body: { path },
+      successLabel: t('bookmark deleted successfully'),
+      errorLabel: t('bookmark could not be deleted'),
+    });
+
+    await loadBookmarks();
+  } catch (e) {
+    const [userMessage, apiErrorMessage] = String(e?.message || e).split('|$|');
+    showSnackbarError(userMessage, apiErrorMessage);
+  } finally {
+    bookmarksSidePanel.loading = false;
+  }
+};
+
+const onBookmarksReordered = async () => {
+  try {
+    await call('/api/v1/mos/fsnavigator/bookmarks', {
+      method: 'POST',
+      body: bookmarksSidePanel.bookmarks,
+      successLabel: t('bookmarks saved successfully'),
+      errorLabel: t('bookmarks could not be saved'),
+    });
+  } catch (e) {
+    const [userMessage, apiErrorMessage] = String(e?.message || e).split('|$|');
+    showSnackbarError(userMessage, apiErrorMessage);
+    await loadBookmarks();
+  }
+};
+
+const addDirectoryAsBookmark = async (item) => {
+  if (!item || item.type !== 'directory') return;
+
+  const bookmarkName = item.path.split('/').filter(Boolean).pop() || 'Bookmark';
+  bookmarksSidePanel.loading = true;
+
+  try {
+    await call('/api/v1/mos/fsnavigator/bookmarks', {
+      method: 'PUT',
+      body: {
+        name: bookmarkName,
+        path: item.path,
+      },
+      successLabel: t('bookmark created successfully'),
+      errorLabel: t('bookmark could not be created'),
+    });
+
+    await loadBookmarks();
+  } catch (e) {
+    const [userMessage, apiErrorMessage] = String(e?.message || e).split('|$|');
+    showSnackbarError(userMessage, apiErrorMessage);
+  } finally {
+    bookmarksSidePanel.loading = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -1092,5 +1220,15 @@ const openContextMenu = (e, item) => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+}
+.size-column {
+  width: 10%;
+  min-width: 100px;
+}
+@media (max-width: 768px) {
+  .size-column {
+    width: 15%;
+    min-width: 120px;
+  }
 }
 </style>

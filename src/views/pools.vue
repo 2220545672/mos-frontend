@@ -20,6 +20,16 @@
                 <v-icon v-if="pool.config.encrypted" size="16" class="ml-1" color="grey" aria-label="locked">mdi-lock</v-icon>
                 <span v-if="pool.mountPoint" class="text-caption text-medium-emphasis ml-2 d-none d-sm-inline text-truncate" style="max-width: 200px">{{ pool.mountPoint }}</span>
                 <v-spacer />
+                <v-tooltip location="top">
+                  <template #activator="{ props }">
+                    <v-chip v-if="pool.type == 'nonraid' && pool.status.parity_valid != null" size="x-small" class="mr-1" variant="tonal" :color="pool.status.parity_valid ? 'green' : 'red'" v-bind="props">
+                      <v-icon v-if="pool.status.parity_valid" size="16" class="mr-1">mdi-check</v-icon>
+                      <v-icon v-else size="16" class="mr-1">mdi-close</v-icon>
+                      <span class="d-none d-sm-inline">{{ pool.status.parity_valid == true ? $t('valid') : $t('invalid') }}</span>
+                    </v-chip>
+                  </template>
+                  {{ $t('parity status') }}
+                </v-tooltip>
                 <v-chip v-if="pool.type" size="x-small" class="mr-1" variant="tonal">{{ pool.type }}</v-chip>
                 <v-chip v-if="pool.status.mounted" size="x-small" color="green" variant="tonal">{{ $t('mounted') }}</v-chip>
                 <v-chip v-else size="x-small" color="grey" variant="tonal">{{ $t('unmounted') }}</v-chip>
@@ -33,7 +43,7 @@
                   <v-list density="compact">
                     <v-list-item v-if="!pool.status.mounted" @click="pool.config && pool.config.encrypted ? openPassphraseDialog(pool) : mountPool(pool)">
                       <template #prepend>
-                        <v-icon size="18">mdi-connection</v-icon>
+                        <v-icon size="18">mdi-power-plug</v-icon>
                       </template>
                       <v-list-item-title>{{ $t('mount pool') }}</v-list-item-title>
                     </v-list-item>
@@ -49,119 +59,78 @@
                       </template>
                       <v-list-item-title>{{ $t('delete pool') }}</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click="wakePool(pool)">
+                    <v-list-item @click="openSpinDialog(pool)">
                       <template #prepend>
-                        <v-icon size="18">mdi-motion-play</v-icon>
+                        <v-icon size="18">mdi-sleep</v-icon>
                       </template>
-                      <v-list-item-title>{{ $t('spin up pool') }}</v-list-item-title>
+                      <v-list-item-title>{{ $t('wake up / sleep') }}</v-list-item-title>
                     </v-list-item>
-                    <v-list-item @click="sleepPool(pool)">
+
+                    <!-- Mergerfs Pool Options -->
+                    <template v-if="pool.type === 'mergerfs'">
+                      <v-divider></v-divider>
+                      <v-list-item @click="openManageMergerfsDevicesDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-harddisk</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('manage devices') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="openManageMergerfsParityDevicesDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-harddisk</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('manage parity devices') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-divider></v-divider>
+                      <v-list-item v-if="pool.parity_devices.length > 0" @click="openSnapraidOperationDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-database-check</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('snapraid operation') }}</v-list-item-title>
+                      </v-list-item>
+                    </template>
+
+                    <!-- NonRaid Pool Options -->
+                    <template v-else-if="pool.type === 'nonraid'">
+                      <v-divider></v-divider>
+                      <v-list-item @click="openManageNonRaidDevicesDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-harddisk</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('manage devices') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="openManageNonRaidParityDevicesDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-harddisk</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('manage parity devices') }}</v-list-item-title>
+                      </v-list-item>
+                      <v-divider></v-divider>
+                      <v-list-item v-if="pool.parity_devices.length > 0" @click="openNonRaidOperationDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-database-check</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('nonraid operation') }}</v-list-item-title>
+                      </v-list-item>
+                    </template>
+
+                    <!-- BTRFS Pool Options -->
+                    <template v-else-if="pool.type === 'btrfs'">
+                      <v-divider></v-divider>
+                      <v-list-item @click="openMultiOperationDialog(pool)">
+                        <template #prepend>
+                          <v-icon size="18">mdi-database-check</v-icon>
+                        </template>
+                        <v-list-item-title>{{ $t('btrfs operation') }}</v-list-item-title>
+                      </v-list-item>
+                    </template>
+
+                    <!-- Pool Settings -->
+                    <v-list-item @click="openPoolSettingsDialog(pool)">
                       <template #prepend>
-                        <v-icon size="18">mdi-motion-pause</v-icon>
+                        <v-icon size="18">mdi-cog</v-icon>
                       </template>
-                      <v-list-item-title>{{ $t('spin down pool') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'mergerfs'"></v-divider>
-                    <v-list-item v-if="pool.type === 'mergerfs'" @click="openAddMergerfsDevicesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('add devices') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs'" @click="openRemoveMergerfsDevicesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-remove</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('remove devices') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs'" @click="openReplaceMergerfsDeviceDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-file-replace</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('replace device') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'mergerfs'"></v-divider>
-                    <v-list-item v-if="pool.type === 'mergerfs'" @click="openAddParityDevicesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('add parity devices') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs' && pool.parity_devices.length > 0" @click="openRemoveParityDevicesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-remove</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('remove parity devices') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs' && pool.parity_devices.length > 0" @click="openReplaceParityDeviceDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-file-replace</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('replace parity device') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'mergerfs'"></v-divider>
-                    <v-list-item v-if="pool.type === 'mergerfs'" @click="openMergerfsPolicyDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-shape-outline</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('change mergerfs policy') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs' && pool.parity_devices.length > 0" @click="openSnapraidOperationDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-database-check</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('snapraid operation') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'mergerfs' && pool.parity_devices.length > 0" @click="openSnapraidSchedulesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-clock-outline</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('snapraid schedules') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'nonraid'"></v-divider>
-                    <v-list-item v-if="pool.type === 'nonraid'" @click="openAddNonRaidDeviceDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('add device') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'nonraid'" @click="openAddNonRaidParityDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('add parity device') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'nonraid'"></v-divider>
-                    <v-list-item v-if="pool.type === 'nonraid' && pool.parity_devices.length > 0" @click="openNonRaidOperationDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('nonraid operation') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'nonraid' && pool.parity_devices.length > 0" @click="openNonRaidSchedulesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-clock-outline</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('nonraid schedules') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider v-if="pool.type === 'btrfs'"></v-divider>
-                    <v-list-item v-if="pool.type === 'btrfs'" @click="openMultiOperationDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-harddisk-plus</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('btrfs operation') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item v-if="pool.type === 'btrfs'" @click="openMultiSchedulesDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-clock-outline</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('btrfs schedules') }}</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="openUsageAlertsDialog(pool)">
-                      <template #prepend>
-                        <v-icon size="18">mdi-bell-outline</v-icon>
-                      </template>
-                      <v-list-item-title>{{ $t('usage alerts') }}</v-list-item-title>
+                      <v-list-item-title>{{ $t('pool settings') }}</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -368,7 +337,16 @@
                     <v-spacer />
                     <v-chip v-if="vpool.status?.mounted" size="x-small" color="green" variant="tonal">{{ $t('mounted') }}</v-chip>
                     <v-chip v-else size="x-small" color="grey" variant="tonal">{{ $t('unmounted') }}</v-chip>
-                    <v-switch v-model="vpool.automount" hide-details density="compact" color="green" inset class="ml-3 flex-grow-0" style="transform: scale(0.8)" @change="switchVPoolAutomount(vpool)"/>
+                    <v-switch
+                      v-model="vpool.automount"
+                      hide-details
+                      density="compact"
+                      color="green"
+                      inset
+                      class="ml-3 flex-grow-0"
+                      style="transform: scale(0.8)"
+                      @change="switchVPoolAutomount(vpool)"
+                    />
                     <v-menu>
                       <template #activator="{ props }">
                         <v-btn variant="text" icon size="small" v-bind="props" color="onPrimary">
@@ -402,18 +380,18 @@
                         class="flex-grow-1"
                         style="min-width: 80px"
                       />
-                    <div class="mt-1 d-flex justify-space-between align-center" style="white-space: nowrap">
-                      <span class="text-caption text-medium-emphasis">{{ vpool.status.usagePercent }}%</span>
-                      <span class="text-caption text-medium-emphasis">{{ vpool.status.usedSpace_human }} / {{ vpool.status.totalSpace_human }}</span>
+                      <div class="mt-1 d-flex justify-space-between align-center" style="white-space: nowrap">
+                        <span class="text-caption text-medium-emphasis">{{ vpool.status.usagePercent }}%</span>
+                        <span class="text-caption text-medium-emphasis">{{ vpool.status.usedSpace_human }} / {{ vpool.status.totalSpace_human }}</span>
+                      </div>
+                    </div>
+                    <div class="d-flex flex-wrap" style="gap: 4px">
+                      <v-chip v-for="(path, idx) in vpool.paths" :key="`path-${idx}`" size="x-small" variant="tonal">
+                        {{ path }}
+                      </v-chip>
+                      <v-chip v-if="vpool.comment" size="x-small" variant="tonal">{{ vpool.comment }}</v-chip>
                     </div>
                   </div>
-                  <div class="d-flex flex-wrap" style="gap: 4px">
-                    <v-chip v-for="(path, idx) in vpool.paths" :key="`path-${idx}`" size="x-small" variant="tonal">
-                      {{ path }}
-                    </v-chip>
-                    <v-chip v-if="vpool.comment" size="x-small" variant="tonal">{{ vpool.comment }}</v-chip>
-                  </div>
-                </div>
                 </div>
               </template>
             </draggable>
@@ -503,7 +481,7 @@
   </v-container>
 
   <!-- Format Dialog -->
-  <v-dialog v-model="formatDialog.value" max-width="400">
+  <v-dialog v-model="formatDialog.value" max-width="400" persistent>
     <v-card class="pa-0" :title="t('confirm format')" prepend-icon="mdi-broom" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         {{ $t('are you sure you want to format this disk?') }}
@@ -529,7 +507,7 @@
   </v-dialog>
 
   <!-- Delete Pool Dialog -->
-  <v-dialog v-model="deletePoolDialog.value" max-width="400">
+  <v-dialog v-model="deletePoolDialog.value" max-width="400" persistent>
     <v-card class="pa-0" :title="t('confirm delete')" prepend-icon="mdi-delete" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         {{ $t('are you sure you want to delete this pool?') }}
@@ -545,7 +523,7 @@
   </v-dialog>
 
   <!-- Create Pool Dialog -->
-  <v-dialog v-model="createPoolDialog.value" max-width="600">
+  <v-dialog v-model="createPoolDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('create pool')" prepend-icon="mdi-plus" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <v-text-field v-model="createPoolDialog.name" :label="$t('name')" class="pt-2" density="comfortable" />
@@ -605,8 +583,36 @@
           density="comfortable"
         />
         <v-select v-if="createPoolDialog.type === 'multi'" v-model="createPoolDialog.raidLevel" :items="raidLevels" :label="$t('raid level')" density="comfortable" />
-        <v-select v-model="createPoolDialog.filesystem" :items="createPoolDialog.filesystems" :label="$t('filesystem')" density="comfortable" />
+        <v-select v-if="createPoolDialog.type !== 'bcachefs'" v-model="createPoolDialog.filesystem" :items="createPoolDialog.filesystems" :label="$t('filesystem')" density="comfortable" />
+        <v-text-field v-if="createPoolDialog.type === 'mergerfs' || createPoolDialog.type === 'nonraid'" v-model="createPoolDialog.minfreespace" :label="$t('minfreespace')" />
         <v-text-field v-if="createPoolDialog.type === 'mergerfs'" v-model="createPoolDialog.comment" :label="$t('comment')" />
+        <div v-if="createPoolDialog.type === 'bcachefs'">
+          <v-select
+            v-model="createPoolDialog.cache_devices"
+            :items="
+              Array.isArray(unassignedDisks)
+                ? unassignedDisks
+                    .filter((disk) => !createPoolDialog.devices.includes(disk.device))
+                    .map((disk) => ({
+                      title: `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`,
+                      value: disk.device,
+                    }))
+                : []
+            "
+            item-title="title"
+            item-value="value"
+            :label="$t('cache devices')"
+            :multiple="true"
+            density="comfortable"
+          />
+          <v-text-field v-model.number="createPoolDialog.data_replicas" :label="$t('data replicas')" type="number" min="1" max="3" density="comfortable" />
+          <v-text-field v-model.number="createPoolDialog.metadata_replicas" :label="$t('metadata replicas')" type="number" min="1" max="3" density="comfortable" />
+          <v-select v-model="createPoolDialog.compression" :items="['none', 'lz4', 'gzip', 'zstd', 'snappy']" :label="$t('compression')" density="comfortable" />
+          <v-select v-model="createPoolDialog.background_compression" :items="['none', 'lz4', 'gzip', 'zstd', 'snappy']" :label="$t('background compression')" density="comfortable" />
+          <v-select v-model="createPoolDialog.cache_mode" :items="['writeback', 'writethrough', 'none']" :label="$t('cache mode')" density="comfortable" />
+          <v-switch v-model="createPoolDialog.erasure_code" :label="$t('erasure code')" hide-details density="compact" color="green" inset />
+        </div>
+
         <div v-if="createPoolDialog.type === 'mergerfs'">
           <v-divider></v-divider>
           <v-btn variant="text" @click="createPoolDialog.showAdvanced = !createPoolDialog.showAdvanced" class="mb-4">
@@ -630,10 +636,11 @@
             </div>
           </v-slide-y-transition>
         </div>
+        <v-switch v-if="createPoolDialog.type === 'mergerfs' || createPoolDialog.type === 'nonraid'" v-model="createPoolDialog.moveonenospc" :label="$t('moveonenospc')" hide-details density="compact" color="green" inset />
         <v-switch v-model="createPoolDialog.automount" :label="$t('automount')" hide-details density="compact" color="green" inset />
         <v-switch v-model="createPoolDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
         <v-switch v-model="createPoolDialog.shared" :label="$t('shared')" hide-details density="compact" color="green" inset />
-        <!-- DISABLED FOR NOW <v-switch v-model="createPoolDialog.encrypted" :label="$t('encrypt')" density="compact" color="red" inset /> -->
+        <v-switch v-model="createPoolDialog.encrypted" :label="$t('encrypt')" density="compact" color="red" inset />
         <v-text-field v-if="createPoolDialog.encrypted" v-model="createPoolDialog.passphrase" :label="$t('passphrase')" type="password" :rules="[(v) => !!v || $t('passphrase is required')]" />
         <v-switch v-if="createPoolDialog.encrypted" v-model="createPoolDialog.create_keyfile" :label="$t('create keyfile')" hide-details density="compact" color="red" inset />
       </v-card-text>
@@ -648,9 +655,9 @@
   </v-dialog>
 
   <!-- Passphrase Dialog -->
-  <v-dialog v-model="passphraseDialog.value" max-width="600">
+  <v-dialog v-model="passphraseDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('enter passphrase')" prepend-icon="mdi-key" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
+      <v-card-text style="overflow: auto" class="pt-2">
         <v-form>
           <v-text-field v-model="passphraseDialog.passphrase" :label="$t('passphrase')" type="password" :rules="[(v) => !!v || $t('passphrase is required')]" />
         </v-form>
@@ -666,14 +673,18 @@
   </v-dialog>
 
   <!-- Add Mergerfs Device Dialog -->
-  <v-dialog v-model="addMergerfsDevicesDialog.value" max-width="600">
+  <v-dialog v-model="addMergerfsDevicesDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('add devices')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <p class="mb-4">{{ $t('select devices to add to pool') }}</p>
         <v-form>
           <v-select
             v-model="addMergerfsDevicesDialog.devices"
-            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`, value: disk.device })) : []"
+            :items="
+              Array.isArray(unassignedDisks)
+                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+                : []
+            "
             item-title="title"
             item-value="value"
             :label="$t('devices')"
@@ -695,7 +706,7 @@
   </v-dialog>
 
   <!-- Remove MergerfsDevice Dialog -->
-  <v-dialog v-model="removeMergerfsDevicesDialog.value" max-width="600">
+  <v-dialog v-model="removeMergerfsDevicesDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('remove devices')" prepend-icon="mdi-harddisk-remove" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <p class="mb-4">{{ $t('select devices to remove from pool') }}</p>
@@ -704,7 +715,10 @@
             v-model="removeMergerfsDevicesDialog.devices"
             :items="
               removeMergerfsDevicesDialog.pool
-                ? removeMergerfsDevicesDialog.pool.data_devices.map((device) => ({ title: `${device.device} (${device.size_human}) (${device.serial ? device.serial : '—'})`, value: device.device }))
+                ? removeMergerfsDevicesDialog.pool.data_devices.map((device) => ({
+                    title: `${device.device} (${device.storage?.totalSpace_human || '—'}) (${device.diskInfo?.diskSerial || '—'})`,
+                    value: device.device,
+                  }))
                 : []
             "
             item-title="title"
@@ -727,14 +741,17 @@
   </v-dialog>
 
   <!-- Replace Mergerfs Device Dialog -->
-  <v-dialog v-model="replaceMergerfsDeviceDialog.value" max-width="600">
+  <v-dialog v-model="replaceMergerfsDeviceDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('replace device')" prepend-icon="mdi-file-replace" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto" class="pt-2">
         <v-select
           v-model="replaceMergerfsDeviceDialog.oldDevice"
           :items="
             replaceMergerfsDeviceDialog.pool
-              ? replaceMergerfsDeviceDialog.pool.data_devices.map((device) => ({ title: `${device.device} (${device.size_human}) (${device.serial ? device.serial : '—'})`, value: device.device }))
+              ? replaceMergerfsDeviceDialog.pool.data_devices.map((device) => ({
+                  title: `${device.device} (${device.storage?.totalSpace_human || '—'}) (${device.diskInfo?.diskSerial || '—'})`,
+                  value: device.device,
+                }))
               : []
           "
           item-title="title"
@@ -744,7 +761,11 @@
         />
         <v-select
           v-model="replaceMergerfsDeviceDialog.newDevice"
-          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`, value: disk.device })) : []"
+          :items="
+            Array.isArray(unassignedDisks)
+              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+              : []
+          "
           item-title="title"
           item-value="value"
           :label="$t('new device')"
@@ -765,128 +786,52 @@
     </v-card>
   </v-dialog>
 
-  <!-- Add Parity Devices Dialog -->
-  <v-dialog v-model="addParityDevicesDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('add parity devices')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <p class="mb-4">{{ $t('select devices to add as parity') }}</p>
+  <!-- Replace NonRaid Device Dialog -->
+  <v-dialog v-model="replaceNonRaidDeviceDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('replace device')" prepend-icon="mdi-file-replace" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto" class="pt-2">
         <v-select
-          v-model="addParityDevicesDialog.devices"
-          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`, value: disk.device })) : []"
+          v-model="replaceNonRaidDeviceDialog.oldDevice"
+          :items="
+            replaceNonRaidDeviceDialog.pool
+              ? replaceNonRaidDeviceDialog.pool.data_devices.map((device) => ({
+                  title: `${device.device} (${device.storage?.totalSpace_human || '—'}) (${device.diskInfo?.diskSerial || '—'})`,
+                  value: device.device,
+                }))
+              : []
+          "
           item-title="title"
           item-value="value"
-          :label="$t('devices')"
-          :multiple="true"
+          :label="$t('old device')"
           density="comfortable"
         />
-        <v-switch v-model="addParityDevicesDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
-        <div @click="addParityDevicesDialog.skip_size_check_clicks < 5 ? addParityDevicesDialog.skip_size_check_clicks++ : null">
-          <v-switch
-            v-model="addParityDevicesDialog.skip_size_check"
-            :label="$t('skip size check')"
-            hide-details
-            density="compact"
-            color="red"
-            inset
-            :disabled="addParityDevicesDialog.skip_size_check_clicks < 5"
-          />
-        </div>
+        <v-select
+          v-model="replaceNonRaidDeviceDialog.newDevice"
+          :items="
+            Array.isArray(unassignedDisks)
+              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+              : []
+          "
+          item-title="title"
+          item-value="value"
+          :label="$t('new device')"
+          density="comfortable"
+          hide-details="auto"
+        />
+        <v-switch v-model="replaceNonRaidDeviceDialog.format" :label="$t('format')" hide-details color="red" inset />
+        <v-text-field v-model="replaceNonRaidDeviceDialog.passphrase" :label="$t('passphrase (if encrypted)')" type="password" />
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="addParityDevicesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn
-          @click="addMergerfsParityDevice(addParityDevicesDialog.pool.id, addParityDevicesDialog.devices, addParityDevicesDialog.format, addParityDevicesDialog.skip_size_check)"
-          color="onPrimary"
-        >
-          {{ $t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Remove Parity Devices Dialog -->
-  <v-dialog v-model="removeParityDevicesDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('remove parity devices')" prepend-icon="mdi-harddisk-remove" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <p class="mb-4">{{ $t('select parity devices to remove') }}</p>
-        <v-form>
-          <v-select
-            v-model="removeParityDevicesDialog.devices"
-            :items="
-              removeParityDevicesDialog.pool
-                ? removeParityDevicesDialog.pool.parity_devices.map((device) => ({ title: `${device.device} (${device.size_human}) (${device.serial ? device.serial : '—'})`, value: device.device }))
-                : []
-            "
-            item-title="title"
-            item-value="value"
-            :label="$t('devices')"
-            :multiple="true"
-            density="comfortable"
-          />
-          <v-switch v-model="removeParityDevicesDialog.unmount" :label="$t('unmount')" hide-details density="compact" color="red" inset />
-        </v-form>
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="removeParityDevicesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn @click="removeMergerfsParityDevice(removeParityDevicesDialog.pool.id, removeParityDevicesDialog.devices, removeParityDevicesDialog.unmount)" color="onPrimary">
-          {{ $t('remove') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Replace Parity Device Dialog -->
-  <v-dialog v-model="replaceParityDeviceDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('replace parity device')" prepend-icon="mdi-file-replace" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <v-form>
-          <v-select
-            v-model="replaceParityDeviceDialog.oldDevice"
-            :items="
-              replaceParityDeviceDialog.pool
-                ? replaceParityDeviceDialog.pool.parity_devices.map((device) => ({ title: `${device.device} (${device.size_human}) (${device.serial ? device.serial : '—'})`, value: device.device }))
-                : []
-            "
-            item-title="title"
-            item-value="value"
-            :label="$t('old device')"
-            density="comfortable"
-          />
-          <v-select
-            v-model="replaceParityDeviceDialog.newDevice"
-            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`, value: disk.device })) : []"
-            item-title="title"
-            item-value="value"
-            :label="$t('new device')"
-            density="comfortable"
-          />
-          <v-switch v-model="replaceParityDeviceDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
-          <div @click="replaceParityDeviceDialog.skip_size_check_clicks < 5 ? replaceParityDeviceDialog.skip_size_check_clicks++ : null">
-            <v-switch
-              v-model="replaceParityDeviceDialog.skip_size_check"
-              :label="$t('skip size check')"
-              hide-details
-              density="compact"
-              color="red"
-              inset
-              :disabled="replaceParityDeviceDialog.skip_size_check_clicks < 5"
-            />
-          </div>
-        </v-form>
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="replaceParityDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="replaceNonRaidDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
         <v-btn
           @click="
-            replaceMergerfsParityDevice(
-              replaceParityDeviceDialog.pool.id,
-              replaceParityDeviceDialog.oldDevice,
-              replaceParityDeviceDialog.newDevice,
-              replaceParityDeviceDialog.format,
-              replaceParityDeviceDialog.skip_size_check,
+            replaceNonRaidDevice(
+              replaceNonRaidDeviceDialog.pool,
+              replaceNonRaidDeviceDialog.oldDevice,
+              replaceNonRaidDeviceDialog.newDevice,
+              replaceNonRaidDeviceDialog.format,
+              replaceNonRaidDeviceDialog.passphrase,
             )
           "
           color="red"
@@ -897,31 +842,427 @@
     </v-card>
   </v-dialog>
 
-  <!-- SnapRAID Operation Dialog -->
-  <v-dialog v-model="snapraidOperationDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('snapraid operations')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
+  <!-- Sleep / Wake Dialog -->
+  <v-dialog v-model="spinDialog.value" max-width="400" persistent>
+    <v-card class="pa-0" :title="t('wake up / sleep')" prepend-icon="mdi-sleep" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
-        <p class="mb-4">{{ $t('select the snapraid operation to be performed') }}</p>
+        <div class="d-flex flex-column gap-3">
+          <v-btn @click="performSpinAction('up')" color="green" variant="tonal" prepend-icon="mdi-motion-play" size="large" class="w-100 mb-4 mt-4">
+            {{ $t('spin up pool') }}
+          </v-btn>
+          <v-btn @click="performSpinAction('down')" color="blue" variant="tonal" prepend-icon="mdi-motion-pause" size="large" class="w-100">
+            {{ $t('spin down pool') }}
+          </v-btn>
+        </div>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-spacer></v-spacer>
+        <v-btn @click="spinDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Manage Mergerfs Devices Dialog -->
+  <v-dialog v-model="manageMergerfsDevicesDialog.value" max-width="700" persistent>
+    <v-card class="pa-0" :title="t('manage mergerfs devices')" prepend-icon="mdi-harddisk" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; max-height: 60vh">
+        <div v-if="manageMergerfsDevicesDialog.pool && manageMergerfsDevicesDialog.pool.data_devices.length > 0">
+          <v-list density="compact">
+            <v-list-item v-for="device in manageMergerfsDevicesDialog.pool.data_devices" :key="device.id" class="mb-2 border rounded pa-2">
+              <template #prepend>
+                <v-icon class="mr-3" :style="{ color: device.powerStatus === 'active' ? 'green' : device.powerStatus === 'standby' ? '#1976d2' : 'red' }">mdi-harddisk</v-icon>
+              </template>
+              <div class="w-100">
+                <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
+                <v-list-item-subtitle class="text-caption">
+                  {{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}
+                </v-list-item-subtitle>
+              </div>
+              <template #append>
+                <div class="d-flex gap-1">
+                  <v-btn size="x-small" variant="text" icon @click="openReplaceMergerfsDeviceDialog(manageMergerfsDevicesDialog.pool, device.device)" color="orange" title="Replace">
+                    <v-icon size="18">mdi-file-replace</v-icon>
+                  </v-btn>
+                  <v-btn size="x-small" variant="text" icon @click="openRemoveMergerfsDevicesDialog(manageMergerfsDevicesDialog.pool, [device.device])" color="red" title="Remove">
+                    <v-icon size="18">mdi-delete</v-icon>
+                  </v-btn>
+                </div>
+              </template>
+            </v-list-item>
+          </v-list>
+        </div>
+        <v-btn color="primary" variant="tonal" @click="openAddMergerfsDevicesDialog(manageMergerfsDevicesDialog.pool)" class="w-100">
+          <v-icon size="18" class="mr-2">mdi-plus</v-icon>
+          {{ $t('add devices') }}
+        </v-btn>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-spacer></v-spacer>
+        <v-btn @click="manageMergerfsDevicesDialog.value = false" color="onPrimary">{{ $t('close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Manage Parity Devices Dialog -->
+  <v-dialog v-model="manageMergerfsParityDevicesDialog.value" max-width="700" persistent>
+    <v-card class="pa-0" :title="t('manage mergerfs parity devices')" prepend-icon="mdi-harddisk" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; max-height: 60vh">
+        <div v-if="manageMergerfsParityDevicesDialog.pool">
+          <div v-if="manageMergerfsParityDevicesDialog.pool.parity_devices && manageMergerfsParityDevicesDialog.pool.parity_devices.length > 0">
+            <v-list density="compact">
+              <v-list-item v-for="device in manageMergerfsParityDevicesDialog.pool.parity_devices" :key="device.id || device.device" class="mb-2 border rounded pa-2">
+                <template #prepend>
+                  <v-icon class="mr-3" :style="{ color: device.powerStatus === 'active' ? 'green' : device.powerStatus === 'standby' ? '#1976d2' : 'red' }">mdi-harddisk</v-icon>
+                </template>
+                <div class="w-100">
+                  <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
+                  <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+                </div>
+                <template #append>
+                  <div class="d-flex gap-1">
+                    <v-btn size="x-small" variant="text" icon @click="startReplaceMergerfsParityDevice(device)" color="orange" title="Replace">
+                      <v-icon size="18">mdi-file-replace</v-icon>
+                    </v-btn>
+                    <v-btn size="x-small" variant="text" icon @click="startRemoveMergerfsParityDevice(device)" color="red" title="Remove">
+                      <v-icon size="18">mdi-delete</v-icon>
+                    </v-btn>
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+            <v-divider class="my-3" />
+          </div>
+          <div v-else class="text-center py-4">
+            <p class="text-caption text-medium-emphasis">{{ $t('no parity devices') }}</p>
+          </div>
+        </div>
+        <v-btn color="primary" variant="tonal" @click="startAddMergerfsParityDevice()" class="w-100">
+          <v-icon size="18" class="mr-2">mdi-plus</v-icon>
+          {{ $t('add parity devices') }}
+        </v-btn>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-spacer></v-spacer>
+        <v-btn @click="manageMergerfsParityDevicesDialog.value = false" color="onPrimary">{{ $t('close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Manage NonRaid Devices Dialog -->
+  <v-dialog v-model="manageNonRaidDevicesDialog.value" max-width="700" persistent>
+    <v-card class="pa-0" :title="t('manage nonraid devices')" prepend-icon="mdi-harddisk" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; max-height: 60vh">
+        <v-alert v-if="manageNonRaidDevicesDialog.pool?.status?.mounted" type="info" variant="tonal" density="compact" class="mb-4 text-caption">
+          {{ $t('pool must be unmounted to make changes') }}
+        </v-alert>
+        <div v-if="manageNonRaidDevicesDialog.pool && manageNonRaidDevicesDialog.pool.data_devices.length > 0">
+          <v-list density="compact">
+            <v-list-item v-for="device in manageNonRaidDevicesDialog.pool.data_devices" :key="device.id" class="mb-2 border rounded pa-2">
+              <template #prepend>
+                <v-icon class="mr-3" :style="{ color: device.powerStatus === 'active' ? 'green' : device.powerStatus === 'standby' ? '#1976d2' : 'red' }">mdi-harddisk</v-icon>
+              </template>
+              <div class="w-100">
+                <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
+                <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+              </div>
+              <template #append>
+                <div class="d-flex gap-1">
+                  <v-btn size="x-small" variant="text" icon @click="openReplaceNonRaidDeviceDialog(manageNonRaidDevicesDialog.pool, device.device)" color="orange" title="Replace">
+                    <v-icon size="18">mdi-file-replace</v-icon>
+                  </v-btn>
+                </div>
+              </template>
+            </v-list-item>
+          </v-list>
+        </div>
+        <v-btn color="primary" variant="tonal" @click="openAddNonRaidDeviceDialog(manageNonRaidDevicesDialog.pool)" class="w-100">
+          <v-icon size="18" class="mr-2">mdi-plus</v-icon>
+          {{ $t('add devices') }}
+        </v-btn>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-spacer></v-spacer>
+        <v-btn @click="manageNonRaidDevicesDialog.value = false" color="onPrimary">{{ $t('close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Manage NonRaid Parity Devices Dialog -->
+  <v-dialog v-model="manageNonRaidParityDevicesDialog.value" max-width="700" persistent>
+    <v-card class="pa-0" :title="t('manage nonraid parity devices')" prepend-icon="mdi-harddisk" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; max-height: 60vh">
+        <v-alert v-if="manageNonRaidParityDevicesDialog.pool?.status?.mounted" type="info" variant="tonal" density="compact" class="mb-4 text-caption">
+          {{ $t('pool must be unmounted to make changes') }}
+        </v-alert>
+        <div v-if="manageNonRaidParityDevicesDialog.pool">
+          <div v-if="manageNonRaidParityDevicesDialog.pool.parity_devices && manageNonRaidParityDevicesDialog.pool.parity_devices.length > 0">
+            <v-list density="compact">
+              <v-list-item v-for="device in manageNonRaidParityDevicesDialog.pool.parity_devices" :key="device.id || device.device" class="mb-2 border rounded pa-2">
+                <template #prepend>
+                  <v-icon class="mr-3" :style="{ color: device.powerStatus === 'active' ? 'green' : device.powerStatus === 'standby' ? '#1976d2' : 'red' }">mdi-harddisk</v-icon>
+                </template>
+                <div class="w-100">
+                  <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
+                  <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+                </div>
+              </v-list-item>
+            </v-list>
+            <v-divider class="my-3" />
+          </div>
+          <div v-else class="text-center py-4">
+            <p class="text-caption text-medium-emphasis">{{ $t('no parity devices') }}</p>
+          </div>
+        </div>
+        <v-btn color="primary" variant="tonal" @click="openAddNonRaidParityDialog(manageNonRaidParityDevicesDialog.pool)" class="w-100">
+          <v-icon size="18" class="mr-2">mdi-plus</v-icon>
+          {{ $t('add parity devices') }}
+        </v-btn>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-spacer></v-spacer>
+        <v-btn @click="manageNonRaidParityDevicesDialog.value = false" color="onPrimary">{{ $t('close') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Add Parity Devices Dialog -->
+  <v-dialog v-model="addMergerfsParityDevicesDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('add parity devices')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto">
+        <p class="mb-4">{{ $t('select devices to add as parity') }}</p>
+        <v-select
+          v-model="addMergerfsParityDevicesDialog.devices"
+          :items="
+            Array.isArray(unassignedDisks)
+              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+              : []
+          "
+          item-title="title"
+          item-value="value"
+          :label="$t('devices')"
+          :multiple="true"
+          density="comfortable"
+        />
+        <v-switch v-model="addMergerfsParityDevicesDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
+        <div @click="addMergerfsParityDevicesDialog.skip_size_check_clicks < 5 ? addMergerfsParityDevicesDialog.skip_size_check_clicks++ : null">
+          <v-switch
+            v-model="addMergerfsParityDevicesDialog.skip_size_check"
+            :label="$t('skip size check')"
+            hide-details
+            density="compact"
+            color="red"
+            inset
+            :disabled="addMergerfsParityDevicesDialog.skip_size_check_clicks < 5"
+          />
+        </div>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-btn @click="addMergerfsParityDevicesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn
+          @click="addMergerfsParityDevice(addMergerfsParityDevicesDialog.pool.id, addMergerfsParityDevicesDialog.devices, addMergerfsParityDevicesDialog.format, addMergerfsParityDevicesDialog.skip_size_check)"
+          color="onPrimary"
+        >
+          {{ $t('add') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Remove Parity Devices Dialog -->
+  <v-dialog v-model="removeMergerfsParityDevicesDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('remove parity devices')" prepend-icon="mdi-harddisk-remove" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto">
+        <p class="mb-4">{{ $t('select parity devices to remove') }}</p>
         <v-form>
           <v-select
-            v-model="snapraidOperationDialog.operation"
+            v-model="removeMergerfsParityDevicesDialog.devices"
             :items="
-              snapraidOperationDialog.pool && snapraidOperationDialog.pool.status && snapraidOperationDialog.pool.status.parity_operation
-                ? ['sync', 'check', 'scrub', 'status', 'force_stop']
-                : ['sync', 'check', 'scrub', 'status']
+              removeMergerfsParityDevicesDialog.pool
+                ? removeMergerfsParityDevicesDialog.pool.parity_devices.map((device) => ({
+                    title: `${device.device} (${device.storage?.totalSpace_human || '—'}) (${device.diskInfo?.diskSerial || '—'})`,
+                    value: device.device,
+                  }))
+                : []
             "
-            :label="$t('operation')"
+            item-title="title"
+            item-value="value"
+            :label="$t('devices')"
+            :multiple="true"
+            density="comfortable"
+          />
+          <v-switch v-model="removeMergerfsParityDevicesDialog.unmount" :label="$t('unmount')" hide-details density="compact" color="red" inset />
+        </v-form>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-btn @click="removeMergerfsParityDevicesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="removeMergerfsParityDevice(removeMergerfsParityDevicesDialog.pool.id, removeMergerfsParityDevicesDialog.devices, removeMergerfsParityDevicesDialog.unmount)" color="onPrimary">
+          {{ $t('remove') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Replace Parity Device Dialog -->
+  <v-dialog v-model="replaceMergerfsParityDeviceDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('replace parity device')" prepend-icon="mdi-file-replace" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto" class="pt-2">
+        <v-form>
+          <v-select
+            v-model="replaceMergerfsParityDeviceDialog.oldDevice"
+            :items="
+              replaceMergerfsParityDeviceDialog.pool
+                ? replaceMergerfsParityDeviceDialog.pool.parity_devices.map((device) => ({
+                    title: `${device.device} (${device.storage?.totalSpace_human || '—'}) (${device.diskInfo?.diskSerial || '—'})`,
+                    value: device.device,
+                  }))
+                : []
+            "
+            item-title="title"
+            item-value="value"
+            :label="$t('old device')"
+            density="comfortable"
+          />
+          <v-select
+            v-model="replaceMergerfsParityDeviceDialog.newDevice"
+            :items="
+              Array.isArray(unassignedDisks)
+                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+                : []
+            "
+            item-title="title"
+            item-value="value"
+            :label="$t('new device')"
+            density="comfortable"
+          />
+          <v-switch v-model="replaceMergerfsParityDeviceDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
+          <div @click="replaceMergerfsParityDeviceDialog.skip_size_check_clicks < 5 ? replaceMergerfsParityDeviceDialog.skip_size_check_clicks++ : null">
+            <v-switch
+              v-model="replaceMergerfsParityDeviceDialog.skip_size_check"
+              :label="$t('skip size check')"
+              hide-details
+              density="compact"
+              color="red"
+              inset
+              :disabled="replaceMergerfsParityDeviceDialog.skip_size_check_clicks < 5"
+            />
+          </div>
+        </v-form>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-btn @click="replaceMergerfsParityDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn
+          @click="
+            replaceMergerfsParityDevice(
+              replaceMergerfsParityDeviceDialog.pool.id,
+              replaceMergerfsParityDeviceDialog.oldDevice,
+              replaceMergerfsParityDeviceDialog.newDevice,
+              replaceMergerfsParityDeviceDialog.format,
+              replaceMergerfsParityDeviceDialog.skip_size_check,
+            )
+          "
+          color="red"
+        >
+          {{ $t('replace') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Add Non-Raid Devices Dialog -->
+  <v-dialog v-model="addNonRaidDeviceDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('add device')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto">
+        <p class="mb-4">{{ $t('select device to add to pool') }}</p>
+        <v-select
+          v-model="addNonRaidDeviceDialog.device"
+          :items="
+            Array.isArray(unassignedDisks)
+              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+              : []
+          "
+          item-title="title"
+          item-value="value"
+          :label="$t('device')"
+          density="comfortable"
+        />
+        <v-select v-model="addNonRaidDeviceDialog.filesystem" :items="addNonRaidDeviceDialog.filesystems" :label="$t('filesystem')" density="comfortable" />
+        <v-text-field v-model="addNonRaidDeviceDialog.passphrase" :label="$t('passphrase (if encrypted)')" type="password" />
+        <v-switch v-model="addNonRaidDeviceDialog.format" :label="$t('format')" density="compact" color="red" inset hide-details="auto" />
+        <v-switch v-model="addNonRaidDeviceDialog.parity_valid" :label="$t('parity valid')" hide-details="auto" density="compact" color="green" inset />
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
+        <v-btn @click="addNonRaidDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn
+          @click="
+            addNonRaidDevice(addNonRaidDeviceDialog.device, addNonRaidDeviceDialog.filesystem, addNonRaidDeviceDialog.passphrase, addNonRaidDeviceDialog.parity_valid, addNonRaidDeviceDialog.format)
+          "
+          color="onPrimary"
+        >
+          {{ $t('add') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Add Non-Raid Parity Dialog -->
+  <v-dialog v-model="addNonRaidParityDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('add parity devices')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto">
+        <p class="mb-4">{{ $t('select devices to add as parity') }}</p>
+        <v-form>
+          <v-select
+            v-model="addNonRaidParityDialog.device"
+            :items="
+              Array.isArray(unassignedDisks)
+                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
+                : []
+            "
+            item-title="title"
+            item-value="value"
+            :label="$t('device')"
             density="comfortable"
           />
         </v-form>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
+        <v-btn @click="addNonRaidParityDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="addNonRaidParity(addNonRaidParityDialog.pool.id, addNonRaidParityDialog.device)" color="onPrimary">
+          {{ $t('add') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- SnapRAID Operation Dialog -->
+  <v-dialog v-model="snapraidOperationDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('snapraid operation')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto">
+        <p class="mb-4">{{ $t('select the snapraid operation to be performed') }}</p>
+        <v-select
+          v-model="snapraidOperationDialog.operation"
+          :items="
+            snapraidOperationDialog.pool && snapraidOperationDialog.pool.status && snapraidOperationDialog.pool.status.parity_operation
+              ? ['sync', 'check', 'scrub', 'status', 'force_stop']
+              : ['sync', 'check', 'scrub', 'status']
+          "
+          :label="$t('operation')"
+          density="comfortable"
+        />
+      </v-card-text>
+      <v-divider />
+      <v-card-actions style="flex-shrink: 0">
         <v-btn @click="snapraidOperationDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn
-          @click="snapraidOperationDialog.operation === 'fix' ? (snapraidFixWarningDialog.value = true) : performSnapraidOperation(snapraidOperationDialog.pool.id, snapraidOperationDialog.operation)"
-          color="onPrimary"
-        >
+        <v-btn @click="performSnapraidOperation(snapraidOperationDialog.pool.id, snapraidOperationDialog.operation)" color="onPrimary">
           {{ $t('perform') }}
         </v-btn>
       </v-card-actions>
@@ -929,12 +1270,12 @@
   </v-dialog>
 
   <!-- NonRaid Operation Dialog -->
-  <v-dialog v-model="nonRaidOperationDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('nonraid operations')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
+  <v-dialog v-model="nonRaidOperationDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('nonraid operation')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <p class="mb-4">{{ $t('select the nonraid operation to be performed') }}</p>
         <v-select v-model="nonRaidOperationDialog.operation" :items="nonRaidOperationDialog.operations" :label="$t('operation')" density="comfortable" />
-        <v-select v-model="nonRaidOperationDialog.option" :items="nonRaidOperationDialog.options" :label="$t('options')" density="comfortable" v-if="nonRaidOperationDialog.operation === 'check'" />
+        <v-select v-if="nonRaidOperationDialog.operation === 'check'" v-model="nonRaidOperationDialog.option" :items="nonRaidOperationDialog.options" :label="$t('options')" density="comfortable" />
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -946,9 +1287,9 @@
     </v-card>
   </v-dialog>
 
-  <!-- Btrfs Operation Dialog -->
-  <v-dialog v-model="multiOperationDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('btrfs operations')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
+  <!-- BTRFS Operation Dialog -->
+  <v-dialog v-model="multiOperationDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('btrfs operation')" prepend-icon="mdi-database-check" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <p class="mb-4">{{ $t('select the btrfs operation to be performed') }}</p>
         <v-select v-model="multiOperationDialog.operation" :items="multiOperationDialog.operations" :label="$t('operation')" density="comfortable" />
@@ -971,216 +1312,195 @@
     </v-card>
   </v-dialog>
 
-  <!-- SnapRAID Schedules Dialog -->
-  <v-dialog v-model="snapraidSchedulesDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('snapraid schedules')" prepend-icon="mdi-clock-outline" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <v-form>
-          <v-switch v-model="snapraidSchedulesDialog.sync.enabled" :label="$t('sync')" hide-details="auto" density="compact" color="green" inset />
-          <v-text-field
-            v-model="snapraidSchedulesDialog.sync.schedule"
-            :label="$t('sync schedule (cron)')"
-            hide-details="auto"
-            class="mt-2 mb-4"
-            append-inner-icon="mdi-calendar-clock"
-            @click:append-inner="openCronDialog(snapraidSchedulesDialog.sync.schedule, (schedule) => (snapraidSchedulesDialog.sync.schedule = schedule))"
-          />
-          <v-switch v-model="snapraidSchedulesDialog.sync.check.enabled" :label="$t('check')" hide-details="auto" density="compact" color="green" inset />
-          <v-text-field
-            v-model="snapraidSchedulesDialog.sync.check.schedule"
-            :label="$t('check schedule (cron)')"
-            hide-details="auto"
-            class="mt-2 mb-4"
-            append-inner-icon="mdi-calendar-clock"
-            @click:append-inner="openCronDialog(snapraidSchedulesDialog.sync.check.schedule, (schedule) => (snapraidSchedulesDialog.sync.check.schedule = schedule))"
-          />
-          <v-switch v-model="snapraidSchedulesDialog.sync.scrub.enabled" :label="$t('scrub')" hide-details="auto" density="compact" color="green" inset />
-          <v-text-field
-            v-model="snapraidSchedulesDialog.sync.scrub.schedule"
-            :label="$t('scrub schedule (cron)')"
-            hide-details="auto"
-            class="mt-2"
-            append-inner-icon="mdi-calendar-clock"
-            @click:append-inner="openCronDialog(snapraidSchedulesDialog.sync.scrub.schedule, (schedule) => (snapraidSchedulesDialog.sync.scrub.schedule = schedule))"
-          />
-        </v-form>
+  <!-- BTRFS Settings Dialog -->
+  <v-dialog v-model="btrfsSettingsDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('btrfs settings')" prepend-icon="mdi-cog" style="max-height: 80vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; flex: 1">
+        <span class="text-title-medium font-weight-medium">{{ $t('btrfs schedules') }}</span>
+        <v-row align="center" class="pt-4">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="btrfsSettingsDialog.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('scrub enabled') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="btrfsSettingsDialog.scrub.enabled">
+            <v-text-field
+              v-model="btrfsSettingsDialog.scrub.schedule"
+              :label="$t('scrub schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(btrfsSettingsDialog.scrub.schedule, (schedule) => (btrfsSettingsDialog.scrub.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
+        <v-row v-if="btrfsSettingsDialog.pool.type === 'btrfs' && btrfsSettingsDialog.pool.data_devices.length > 1" align="center">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="btrfsSettingsDialog.balance.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('balance enabled') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="btrfsSettingsDialog.balance.enabled">
+            <v-text-field
+              v-model="btrfsSettingsDialog.balance.schedule"
+              :label="$t('balance schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(btrfsSettingsDialog.balance.schedule, (schedule) => (btrfsSettingsDialog.balance.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
+        <v-divider class="mt-6 mb-4"></v-divider>
+        <span class="text-title-medium font-weight-medium">{{ $t('usage alerts') }}</span>
+        <v-row class="mt-4">
+          <v-col cols="12" md="6">
+            <v-text-field v-model="btrfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="btrfsSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="snapraidSchedulesDialog.value = false" color="onPrimary">
-          {{ $t('cancel') }}
-        </v-btn>
-        <v-btn color="onPrimary" @click="saveSnapraidSchedules(snapraidSchedulesDialog.pool.id, snapraidSchedulesDialog.sync)">
+        <v-btn @click="btrfsSettingsDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="saveBtrfsSettings()" color="onPrimary">
           {{ $t('save') }}
         </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
-  <!-- NonRaid Schedules Dialog -->
-  <v-dialog v-model="nonRaidSchedulesDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('nonraid schedules')" prepend-icon="mdi-clock-outline" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <v-switch v-model="nonRaidSchedulesDialog.check.enabled" :label="$t('check')" hide-details="auto" density="compact" color="green" inset />
-        <v-text-field
-          v-model="nonRaidSchedulesDialog.check.schedule"
-          :label="$t('check schedule (cron)')"
-          hide-details="auto"
-          class="mt-2 mb-4"
-          append-inner-icon="mdi-calendar-clock"
-          @click:append-inner="openCronDialog(nonRaidSchedulesDialog.check.schedule, (schedule) => (nonRaidSchedulesDialog.check.schedule = schedule))"
-        />
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="nonRaidSchedulesDialog.value = false" color="onPrimary">
-          {{ $t('cancel') }}
-        </v-btn>
-        <v-btn color="onPrimary" @click="saveNonRaidCheckSchedule(nonRaidSchedulesDialog.pool.id, nonRaidSchedulesDialog.check)">
-          {{ $t('save') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Multi Schedules Dialog -->
-  <v-dialog v-model="multiSchedulesDialog.value" max-width="400">
-    <v-card class="pa-0" :title="t('btrfs schedules')" prepend-icon="mdi-clock-outline" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <v-switch v-model="multiSchedulesDialog.scrub.enabled" :label="$t('scrub enabled')" hide-details="auto" density="compact" color="green" inset />
-        <v-text-field
-          v-model="multiSchedulesDialog.scrub.schedule"
-          :label="$t('scrub schedule (cron)')"
-          hide-details="auto"
-          class="mt-2 mb-4"
-          append-inner-icon="mdi-calendar-clock"
-          @click:append-inner="openCronDialog(multiSchedulesDialog.scrub.schedule, (schedule) => (multiSchedulesDialog.scrub.schedule = schedule))"
-          v-if="multiSchedulesDialog.scrub.enabled"
-        />
-        <v-switch
-          v-if="multiSchedulesDialog.pool.type === 'btrfs' && multiSchedulesDialog.pool.data_devices.length > 1"
-          v-model="multiSchedulesDialog.balance.enabled"
-          :label="$t('balance enabled')"
-          hide-details="auto"
-          density="compact"
-          color="green"
-          inset
-        />
-        <v-text-field
-          v-model="multiSchedulesDialog.balance.schedule"
-          :label="$t('balance schedule (cron)')"
-          hide-details="auto"
-          class="mt-2 mb-4"
-          append-inner-icon="mdi-calendar-clock"
-          @click:append-inner="openCronDialog(multiSchedulesDialog.balance.schedule, (schedule) => (multiSchedulesDialog.balance.schedule = schedule))"
-          v-if="multiSchedulesDialog.balance.enabled"
-        />
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="multiSchedulesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn color="onPrimary" @click="saveMultiSchedules(multiSchedulesDialog.pool.id, multiSchedulesDialog.scrub, multiSchedulesDialog.balance)">
-          {{ $t('save') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Add Non-Raid Devices Dialog -->
-  <v-dialog v-model="addNonRaidDeviceDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('add device')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <p class="mb-4">{{ $t('select device to add to pool') }}</p>
-        <v-select v-model="addNonRaidDeviceDialog.device" :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => disk.device) : []" :label="$t('device')" density="comfortable" />
-        <v-select v-model="addNonRaidDeviceDialog.filesystem" :items="addNonRaidDeviceDialog.filesystems" :label="$t('filesystem')" density="comfortable" />
-        <v-text-field v-model="addNonRaidDeviceDialog.passphrase" :label="$t('passphrase (if encrypted)')" type="password" />
-        <v-switch v-model="addNonRaidDeviceDialog.format" :label="$t('format')" density="compact" color="red" inset hide-details="auto" />
-        <v-switch v-model="addNonRaidDeviceDialog.parity_valid" :label="$t('parity valid')" hide-details="auto" density="compact" color="green" inset />
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="addNonRaidDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn
-          @click="
-            addNonRaidDevice(addNonRaidDeviceDialog.device, addNonRaidDeviceDialog.filesystem, addNonRaidDeviceDialog.passphrase, addNonRaidDeviceDialog.parity_valid, addNonRaidDeviceDialog.format)
-          "
-          color="onPrimary"
-        >
-          {{ $t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Add Non-Raid Parity Dialog -->
-  <v-dialog v-model="addNonRaidParityDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('add parity devices')" prepend-icon="mdi-harddisk-plus" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <p class="mb-4">{{ $t('select devices to add as parity') }}</p>
-        <v-form>
-          <v-select
-            v-model="addNonRaidParityDialog.device"
-            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => `${disk.device} (${disk.size_human}) (${disk.serial ? disk.serial : '—'})`) : []"
-            :label="$t('device')"
-            density="comfortable"
-          />
-        </v-form>
-      </v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="addNonRaidParityDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn @click="addNonRaidParity(addNonRaidParityDialog.pool.id, addNonRaidParityDialog.device)" color="onPrimary">
-          {{ $t('add') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <!-- Mergerfs Policy -->
-  <v-dialog v-model="mergerfsPolicyDialog.value" max-width="600">
-    <v-card class="pa-0" :title="t('mergerfs policies')" prepend-icon="mdi-shape-outline" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">
-        <v-select v-model="mergerfsPolicyDialog.policies.create" :items="mergerfsPolicyDialog.availablePolicies" :label="$t('create policy')" density="comfortable" class="mt-2" />
-        <v-select v-model="mergerfsPolicyDialog.policies.search" :items="mergerfsPolicyDialog.availablePolicies" :label="$t('search policy')" density="comfortable" />
-        <a href="https://trapexit.github.io/mergerfs/latest/config/functions_categories_policies/#policy-descriptions" target="_blank" class="mt-2">
+  <!-- Mergerfs Settings Dialog -->
+  <v-dialog v-model="mergerfsSettingsDialog.value" max-width="700" persistent>
+    <v-card class="pa-0" :title="t('mergerfs settings')" prepend-icon="mdi-cog" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; flex: 1">
+        <span class="text-title-medium font-weight-medium">{{ $t('snapraid schedules') }}</span>
+        <v-row align="center" class="pt-4">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('sync') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.enabled">
+            <v-text-field
+              v-model="mergerfsSettingsDialog.snapraid_sync.schedule"
+              :label="$t('sync schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
+        <v-row align="center" class="mt-2">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('check') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.check.enabled">
+            <v-text-field
+              v-model="mergerfsSettingsDialog.snapraid_sync.check.schedule"
+              :label="$t('check schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.check.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.check.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
+        <v-row align="center" class="mt-2">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('scrub') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.scrub.enabled">
+            <v-text-field
+              v-model="mergerfsSettingsDialog.snapraid_sync.scrub.schedule"
+              :label="$t('scrub schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.scrub.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.scrub.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
+        <v-divider class="mt-6 mb-4"></v-divider>
+        <span class="text-title-medium font-weight-medium">{{ $t('mergerfs policies') }}</span>
+        <v-select v-model="mergerfsSettingsDialog.mergerfs_policies.create" :items="mergerfsSettingsDialog.availablePolicies" :label="$t('create policy')" density="comfortable" class="mt-4" />
+        <v-select v-model="mergerfsSettingsDialog.mergerfs_policies.search" :items="mergerfsSettingsDialog.availablePolicies" :label="$t('search policy')" density="comfortable" />
+        <a href="https://trapexit.github.io/mergerfs/latest/config/functions_categories_policies/#policy-descriptions" target="_blank" class="text-primary text-decoration-underline">
           {{ $t('see mergerfs documentation for policy descriptions') }}
         </a>
+        <v-divider class="mt-6 mb-4"></v-divider>
+        <span class="text-title-medium font-weight-medium">{{ $t('usage alerts') }}</span>
+        <v-row class="mt-4">
+          <v-col cols="12" md="6">
+            <v-text-field v-model="mergerfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="mergerfsSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="mergerfsPolicyDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn @click="changeMergerfsPolicies(mergerfsPolicyDialog.pool.id, mergerfsPolicyDialog.policies)" color="onPrimary">
+        <v-btn @click="mergerfsSettingsDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="saveMergerfsSettings()" color="onPrimary">
           {{ $t('save') }}
         </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
-  <!-- Snapraid Fix Warning -->
-  <v-dialog v-model="snapraidFixWarningDialog.value" max-width="400">
-    <v-card class="pa-0" :title="t('warning')" prepend-icon="mdi-alert" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto">{{ $t('are you sure you want to perform a fix on your pool') }}?</v-card-text>
-      <v-divider />
-      <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="snapraidFixWarningDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn @click="performSnapraidOperation(snapraidFixWarningDialog.pool.id, 'fix')" color="red">
-          {{ $t('perform') }}
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <!-- NonRaid Settings Dialog -->
+  <v-dialog v-model="nonraidSettingsDialog.value" max-width="600" persistent>
+    <v-card class="pa-0" :title="t('nonraid settings')" prepend-icon="mdi-cog" style="max-height: 70vh; display: flex; flex-direction: column">
+      <v-card-text style="overflow: auto; flex: 1">
+        <span class="text-title-medium font-weight-medium">{{ $t('nonraid schedules') }}</span>
+        <v-row align="center" class="pt-4">
+          <v-col cols="4">
+            <div class="d-flex align-center">
+              <v-switch v-model="nonraidSettingsDialog.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+              <span class="text-body-2">{{ $t('check') }}</span>
+            </div>
+          </v-col>
+          <v-col cols="8" v-if="nonraidSettingsDialog.check.enabled">
+            <v-text-field
+              v-model="nonraidSettingsDialog.check.schedule"
+              :label="$t('check schedule (cron)')"
+              hide-details="auto"
+              density="compact"
+              append-inner-icon="mdi-calendar-clock"
+              @click:append-inner="openCronDialog(nonraidSettingsDialog.check.schedule, (schedule) => (nonraidSettingsDialog.check.schedule = schedule))"
+            />
+          </v-col>
+        </v-row>
 
-  <!-- Usage Alerts -->
-  <v-dialog v-model="usageAlertsDialog.value" max-width="400">
-    <v-card class="pa-0" :title="t('usage alerts')" prepend-icon="mdi-bell-outline" style="max-height: 60vh; display: flex; flex-direction: column">
-      <v-card-text style="overflow: auto" class="pt-2">
-        <v-text-field v-model="usageAlertsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" />
-        <v-text-field v-model="usageAlertsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
+        <v-divider class="mt-6 mb-4"></v-divider>
+
+        <span class="text-title-medium font-weight-medium">{{ $t('usage alerts') }}</span>
+        <v-row class="mt-4">
+          <v-col cols="12" md="6">
+            <v-text-field v-model="nonraidSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="nonraidSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
-        <v-btn @click="usageAlertsDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
-        <v-btn @click="saveUsageAlerts(usageAlertsDialog.pool.id, usageAlertsDialog.usage_alert)" color="onPrimary">
+        <v-btn @click="nonraidSettingsDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="saveNonraidSettings()" color="onPrimary">
           {{ $t('save') }}
         </v-btn>
       </v-card-actions>
@@ -1188,7 +1508,7 @@
   </v-dialog>
 
   <!-- Create Virtual Pool Dialog -->
-  <v-dialog v-model="createVpoolDialog.value" max-width="600">
+  <v-dialog v-model="createVpoolDialog.value" max-width="600" persistent>
     <v-card class="pa-0" :title="t('create virtual pool')" prepend-icon="mdi-plus" style="max-height: 60vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto">
         <v-text-field v-model="createVpoolDialog.name" :label="$t('name')" density="comfortable" class="pt-2" />
@@ -1257,15 +1577,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, watch } from 'vue';
-import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
+import { ref, onMounted, reactive, watch, nextTick } from 'vue';
+import { showSnackbarError } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
-import { useOverlay } from '@/composables/useOverlay';
 import draggable from 'vuedraggable';
 import CronScheduleDialog from '@/components/cronScheduleDialog.vue';
 import fsNavigatorDialog from '@/components/fsNavigatorDialog.vue';
+import { useApi } from '@/composables/useApi';
 
 const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
+const { call } = useApi();
 const pools = ref([]);
 const poolsLoading = ref(true);
 const unassignedDisks = ref([]);
@@ -1273,7 +1594,6 @@ const unassignedDisksLoading = ref(true);
 const vpools = ref([]);
 const vpoolsLoading = ref(true);
 const { t } = useI18n();
-const { overlay } = useOverlay();
 const cronDialogApplyCallback = ref(null);
 const cronDialog = reactive({
   value: false,
@@ -1288,6 +1608,10 @@ const formatDialog = reactive({
   filesystem: '',
   partition: true,
   wipeExisting: true,
+});
+const spinDialog = reactive({
+  value: false,
+  pool: null,
 });
 const createPoolDialog = reactive({
   value: false,
@@ -1316,6 +1640,15 @@ const createPoolDialog = reactive({
   },
   skip_size_check: false,
   skip_size_check_clicks: 0,
+  cache_devices: [],
+  data_replicas: 2,
+  metadata_replicas: 2,
+  erasure_code: true,
+  compression: 'lz4',
+  background_compression: 'zstd',
+  cache_mode: 'writethrough',
+  minfreespace: "20G",
+  moveonenospc: true,  
 });
 const deletePoolDialog = reactive({
   value: false,
@@ -1328,7 +1661,7 @@ const passphraseDialog = reactive({
   pool: null,
   passphrase: '',
 });
-const addParityDevicesDialog = reactive({
+const addMergerfsParityDevicesDialog = reactive({
   value: false,
   pool: null,
   devices: [],
@@ -1336,22 +1669,13 @@ const addParityDevicesDialog = reactive({
   skip_size_check: false,
   skip_size_check_clicks: 0,
 });
-const removeParityDevicesDialog = reactive({
+const removeMergerfsParityDevicesDialog = reactive({
   value: false,
   pool: null,
   devices: [],
   unmount: true,
 });
-const snapraidOperationDialog = reactive({
-  value: false,
-  pool: null,
-  operation: '',
-});
-const snapraidFixWarningDialog = reactive({
-  value: false,
-  pool: null,
-});
-const replaceParityDeviceDialog = reactive({
+const replaceMergerfsParityDeviceDialog = reactive({
   value: false,
   pool: null,
   oldDevice: null,
@@ -1380,38 +1704,29 @@ const replaceMergerfsDeviceDialog = reactive({
   newDevice: null,
   format: false,
 });
-const snapraidSchedulesDialog = reactive({
+const manageMergerfsDevicesDialog = reactive({
   value: false,
-  sync: {
-    enabled: false,
-    schedule: '30 0 * * *',
-    check: {
-      enabled: false,
-      schedule: '0 0 * */3 SUN',
-    },
-    scrub: {
-      enabled: false,
-      schedule: '0 4 * * WED',
-    },
-  },
+  pool: null,
 });
-const nonRaidSchedulesDialog = reactive({
+const manageMergerfsParityDevicesDialog = reactive({
   value: false,
-  check: {
-    enabled: false,
-    schedule: '0 0 * */3 SUN',
-  },
+  pool: null,
 });
-const multiSchedulesDialog = reactive({
+const manageNonRaidDevicesDialog = reactive({
   value: false,
-  scrub: {
-    enabled: false,
-    schedule: '0 4 * * WED',
-  },
-  balance: {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  },
+  pool: null,
+});
+const manageNonRaidParityDevicesDialog = reactive({
+  value: false,
+  pool: null,
+});
+const replaceNonRaidDeviceDialog = reactive({
+  value: false,
+  pool: null,
+  oldDevice: null,
+  newDevice: null,
+  format: false,
+  passphrase: '',
 });
 const addNonRaidDeviceDialog = reactive({
   value: false,
@@ -1428,11 +1743,32 @@ const addNonRaidParityDialog = reactive({
   pool: null,
   device: '',
 });
+const btrfsSettingsDialog = reactive({
+  value: false,
+  pool: null,
+  scrub: {
+    enabled: false,
+    schedule: '0 4 * * WED',
+  },
+  balance: {
+    enabled: false,
+    schedule: '0 5 * * SUN',
+  },
+  usage_alert: {
+    warning: 85,
+    alert: 90,
+  },
+});
+const snapraidOperationDialog = reactive({
+  value: false,
+  pool: null,
+  operation: '',
+});
 const nonRaidOperationDialog = reactive({
   value: false,
   pool: null,
   operation: '',
-  operations: ['check', 'start', 'pause', 'resume', 'cancel'],
+  operations: ['check', 'pause', 'resume', 'cancel'],
   option: 'NOCORRECT',
   options: ['CORRECT', 'NOCORRECT'],
 });
@@ -1444,18 +1780,38 @@ const multiOperationDialog = reactive({
   option: '',
   options: ['start', 'pause', 'resume', 'cancel'],
 });
-const mergerfsPolicyDialog = reactive({
+const mergerfsSettingsDialog = reactive({
   value: false,
   pool: null,
-  policies: {
+  snapraid_sync: {
+    enabled: false,
+    schedule: '30 0 * * *',
+    check: {
+      enabled: false,
+      schedule: '0 0 * */3 SUN',
+    },
+    scrub: {
+      enabled: false,
+      schedule: '0 4 * * WED',
+    },
+  },
+  mergerfs_policies: {
     create: 'pfrd',
     search: 'ff',
   },
   availablePolicies: ['pfrd', 'rand', 'mfs', 'ff', 'lfs', 'lup', 'lus', 'all', 'msppfrd', 'mspmfs', 'msplfs', 'msplus', 'eppfrd', 'epmfs', 'eprand', 'epff', 'eplfs', 'eplus', 'epall', 'newest'],
+  usage_alert: {
+    warning: 85,
+    alert: 90,
+  },
 });
-const usageAlertsDialog = reactive({
+const nonraidSettingsDialog = reactive({
   value: false,
   pool: null,
+  check: {
+    enabled: false,
+    schedule: '0 0 * */3 SUN',
+  },
   usage_alert: {
     warning: 85,
     alert: 90,
@@ -1500,7 +1856,6 @@ watch(
     }
   },
 );
-
 watch(
   () => createPoolDialog.snapraidDevice,
   (newSnapraidDevices) => {
@@ -1512,7 +1867,6 @@ watch(
     }
   },
 );
-
 watch(
   () => cronDialog.value,
   (isOpen) => {
@@ -1547,76 +1901,86 @@ const openAddMergerfsDevicesDialog = (pool) => {
   addMergerfsDevicesDialog.passphrase = '';
   addMergerfsDevicesDialog.skip_size_check = false;
 };
-const openRemoveMergerfsDevicesDialog = (pool) => {
+const openRemoveMergerfsDevicesDialog = (pool, devices = []) => {
   removeMergerfsDevicesDialog.value = true;
   removeMergerfsDevicesDialog.pool = pool;
-  removeMergerfsDevicesDialog.devices = [];
+  removeMergerfsDevicesDialog.devices = devices;
   removeMergerfsDevicesDialog.unmount = true;
 };
-const openReplaceMergerfsDeviceDialog = (pool) => {
+const openReplaceMergerfsDeviceDialog = (pool, oldDevice = null) => {
   replaceMergerfsDeviceDialog.value = true;
   replaceMergerfsDeviceDialog.pool = pool;
-  replaceMergerfsDeviceDialog.oldDevice = null;
+  replaceMergerfsDeviceDialog.oldDevice = oldDevice;
   replaceMergerfsDeviceDialog.newDevice = null;
   replaceMergerfsDeviceDialog.format = false;
 };
-const openReplaceParityDeviceDialog = (pool) => {
-  replaceParityDeviceDialog.value = true;
-  replaceParityDeviceDialog.pool = pool;
-  replaceParityDeviceDialog.oldDevice = null;
-  replaceParityDeviceDialog.newDevice = null;
-  replaceParityDeviceDialog.format = false;
-  replaceParityDeviceDialog.skip_size_check = false;
-  replaceParityDeviceDialog.skip_size_check_clicks = 0;
+const openReplaceNonRaidDeviceDialog = (pool, oldDevice = null) => {
+  replaceNonRaidDeviceDialog.value = true;
+  replaceNonRaidDeviceDialog.pool = pool;
+  replaceNonRaidDeviceDialog.oldDevice = oldDevice;
+  replaceNonRaidDeviceDialog.newDevice = null;
+  replaceNonRaidDeviceDialog.format = false;
+  replaceNonRaidDeviceDialog.passphrase = '';
 };
-const openSnapraidOperationDialog = (pool) => {
-  snapraidOperationDialog.value = true;
-  snapraidOperationDialog.pool = pool;
-  snapraidOperationDialog.operation = '';
+const openSpinDialog = (pool) => {
+  spinDialog.value = true;
+  spinDialog.pool = pool;
 };
-const openSnapraidSchedulesDialog = (pool) => {
-  snapraidSchedulesDialog.value = true;
-  snapraidSchedulesDialog.pool = pool;
-  snapraidSchedulesDialog.sync = pool.config.sync || {
-    enabled: false,
-    schedule: '30 0 * * *',
-    check: {
-      enabled: false,
-      schedule: '0 0 * */3 SUN',
-    },
-    scrub: {
-      enabled: false,
-      schedule: '0 4 * * WED',
-    },
-  };
+const performSpinAction = (action) => {
+  if (spinDialog.pool) {
+    if (action === 'up') {
+      wakePool(spinDialog.pool);
+    } else if (action === 'down') {
+      sleepPool(spinDialog.pool);
+    }
+    spinDialog.value = false;
+  }
 };
-const openMultiSchedulesDialog = (pool) => {
-  multiSchedulesDialog.value = true;
-  multiSchedulesDialog.pool = pool;
-  multiSchedulesDialog.scrub = {
-    enabled: false,
-    schedule: '0 4 * * WED',
-  };
-  multiSchedulesDialog.balance = {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  };
-  multiSchedulesDialog.scrub = pool.config.scrub || {
-    enabled: false,
-    schedule: '0 4 * * WED',
-  };
-  multiSchedulesDialog.balance = pool.config.balance || {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  };
+const openManageMergerfsDevicesDialog = (pool) => {
+  manageMergerfsDevicesDialog.value = true;
+  manageMergerfsDevicesDialog.pool = pool;
 };
-const openNonRaidSchedulesDialog = (pool) => {
-  nonRaidSchedulesDialog.value = true;
-  nonRaidSchedulesDialog.pool = pool;
-  nonRaidSchedulesDialog.check = pool.config.check || {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  };
+const openManageMergerfsParityDevicesDialog = (pool) => {
+  manageMergerfsParityDevicesDialog.value = true;
+  manageMergerfsParityDevicesDialog.pool = pool;
+};
+const openManageNonRaidDevicesDialog = (pool) => {
+  manageNonRaidDevicesDialog.value = true;
+  manageNonRaidDevicesDialog.pool = pool;
+};
+const openManageNonRaidParityDevicesDialog = (pool) => {
+  manageNonRaidParityDevicesDialog.value = true;
+  manageNonRaidParityDevicesDialog.pool = pool;
+};
+const startAddMergerfsParityDevice = () => {
+  manageMergerfsParityDevicesDialog.value = false;
+  const pool = manageMergerfsParityDevicesDialog.pool;
+  nextTick(() => {
+    openAddMergerfsParityDevicesDialog(pool);
+  });
+};
+const startReplaceMergerfsParityDevice = (device) => {
+  manageMergerfsParityDevicesDialog.value = false;
+  const pool = manageMergerfsParityDevicesDialog.pool;
+  nextTick(() => {
+    replaceMergerfsParityDeviceDialog.value = true;
+    replaceMergerfsParityDeviceDialog.pool = pool;
+    replaceMergerfsParityDeviceDialog.oldDevice = device.device;
+    replaceMergerfsParityDeviceDialog.newDevice = null;
+    replaceMergerfsParityDeviceDialog.format = false;
+    replaceMergerfsParityDeviceDialog.skip_size_check = false;
+    replaceMergerfsParityDeviceDialog.skip_size_check_clicks = 0;
+  });
+};
+const startRemoveMergerfsParityDevice = (device) => {
+  manageMergerfsParityDevicesDialog.value = false;
+  const pool = manageMergerfsParityDevicesDialog.pool;
+  nextTick(() => {
+    removeMergerfsParityDevicesDialog.value = true;
+    removeMergerfsParityDevicesDialog.pool = pool;
+    removeMergerfsParityDevicesDialog.devices = [device.device];
+    removeMergerfsParityDevicesDialog.unmount = true;
+  });
 };
 const openPassphraseDialog = (pool) => {
   passphraseDialog.value = true;
@@ -1649,25 +2013,37 @@ const openCreatePoolDialog = async (disk) => {
   createPoolDialog.parity_valid = false;
   createPoolDialog.skip_size_check = false;
   createPoolDialog.skip_size_check_clicks = 0;
+  createPoolDialog.cache_devices = [];
+  createPoolDialog.data_replicas = 2;
+  createPoolDialog.metadata_replicas = 2;
+  createPoolDialog.erasure_code = true;
+  createPoolDialog.compression = 'lz4';
+  createPoolDialog.background_compression = 'zstd';
+  createPoolDialog.cache_mode = 'writethrough';
   createPoolDialog.filesystems = await getFilesystems(createPoolDialog.type);
 };
 const openDeletePoolDialog = (pool) => {
   deletePoolDialog.value = true;
   deletePoolDialog.pool = pool;
 };
-const openAddParityDevicesDialog = (pool) => {
-  addParityDevicesDialog.value = true;
-  addParityDevicesDialog.pool = pool;
-  addParityDevicesDialog.devices = [];
-  addParityDevicesDialog.format = false;
-  addParityDevicesDialog.skip_size_check = false;
-  addParityDevicesDialog.skip_size_check_clicks = 0;
+const openAddMergerfsParityDevicesDialog = (pool) => {
+  addMergerfsParityDevicesDialog.value = true;
+  addMergerfsParityDevicesDialog.pool = pool;
+  addMergerfsParityDevicesDialog.devices = [];
+  addMergerfsParityDevicesDialog.format = false;
+  addMergerfsParityDevicesDialog.skip_size_check = false;
+  addMergerfsParityDevicesDialog.skip_size_check_clicks = 0;
 };
-const openRemoveParityDevicesDialog = (pool) => {
-  removeParityDevicesDialog.value = true;
-  removeParityDevicesDialog.pool = pool;
-  removeParityDevicesDialog.devices = [];
-  removeParityDevicesDialog.unmount = true;
+const openSnapraidOperationDialog = (pool) => {
+  snapraidOperationDialog.value = true;
+  snapraidOperationDialog.pool = pool;
+  snapraidOperationDialog.operation = '';
+};
+const openNonRaidOperationDialog = (pool) => {
+  nonRaidOperationDialog.value = true;
+  nonRaidOperationDialog.pool = pool;
+  nonRaidOperationDialog.operation = '';
+  nonRaidOperationDialog.option = 'NOCORRECT';
 };
 const openAddNonRaidDeviceDialog = async (pool) => {
   addNonRaidDeviceDialog.value = true;
@@ -1684,30 +2060,72 @@ const openAddNonRaidParityDialog = (pool) => {
   addNonRaidParityDialog.pool = pool;
   addNonRaidParityDialog.device = '';
 };
-const openMergerfsPolicyDialog = async (pool) => {
-  mergerfsPolicyDialog.value = true;
-  mergerfsPolicyDialog.pool = pool;
-  const policies = await getMergerfsPolicies(pool.id);
-  mergerfsPolicyDialog.policies = {
-    create: policies.create ? policies.create : 'pfrd',
-    search: policies.search ? policies.search : 'ff',
-  };
-};
-const openNonRaidOperationDialog = (pool) => {
-  nonRaidOperationDialog.value = true;
-  nonRaidOperationDialog.pool = pool;
-  nonRaidOperationDialog.operation = '';
-  nonRaidOperationDialog.option = 'NOCORRECT';
-};
 const openMultiOperationDialog = (pool) => {
   multiOperationDialog.value = true;
   multiOperationDialog.pool = pool;
   multiOperationDialog.operation = '';
+  multiOperationDialog.option = '';
 };
-const openUsageAlertsDialog = (pool) => {
-  usageAlertsDialog.value = true;
-  usageAlertsDialog.pool = pool;
-  usageAlertsDialog.usage_alert = {
+const openPoolSettingsDialog = async (pool) => {
+  if (pool.type === 'mergerfs') {
+    openMergerfsSettingsDialog(pool);
+  } else if (pool.type === 'nonraid') {
+    openNonraidSettingsDialog(pool);
+  } else if (pool.type === 'btrfs') {
+    openBtrfsSettingsDialog(pool);
+  }
+};
+const openBtrfsSettingsDialog = (pool) => {
+  btrfsSettingsDialog.value = true;
+  btrfsSettingsDialog.pool = pool;
+  btrfsSettingsDialog.scrub = pool.config.scrub || {
+    enabled: false,
+    schedule: '0 4 * * WED',
+  };
+  btrfsSettingsDialog.balance = pool.config.balance || {
+    enabled: false,
+    schedule: '0 5 * * SUN',
+  };
+  btrfsSettingsDialog.usage_alert = {
+    warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
+    alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
+  };
+};
+const openMergerfsSettingsDialog = async (pool) => {
+  mergerfsSettingsDialog.value = true;
+  mergerfsSettingsDialog.pool = pool;
+  const policies = await getMergerfsPolicies(pool.id);
+  mergerfsSettingsDialog.mergerfs_policies = {
+    create: policies.create ? policies.create : 'pfrd',
+    search: policies.search ? policies.search : 'ff',
+  };
+  mergerfsSettingsDialog.snapraid_sync = pool.config.snapraid
+    ? pool.config.snapraid
+    : {
+        enabled: false,
+        schedule: '30 0 * * *',
+        check: {
+          enabled: false,
+          schedule: '0 0 * */3 SUN',
+        },
+        scrub: {
+          enabled: false,
+          schedule: '0 4 * * WED',
+        },
+      };
+  mergerfsSettingsDialog.usage_alert = {
+    warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
+    alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
+  };
+};
+const openNonraidSettingsDialog = (pool) => {
+  nonraidSettingsDialog.value = true;
+  nonraidSettingsDialog.pool = pool;
+  nonraidSettingsDialog.check = pool.config.check || {
+    enabled: false,
+    schedule: '0 5 * * SUN',
+  };
+  nonraidSettingsDialog.usage_alert = {
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
   };
@@ -1764,43 +2182,24 @@ const handleVpoolFsSelected = (item) => {
 
 const getPools = async () => {
   try {
-    const res = await fetch('/api/v1/pools', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/pools', {
+      errorLabel: t('pools could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pools could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    pools.value = await res.json();
-    pools.value.sort((a, b) => a.index - b.index);
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
+    pools.value = result.sort((a, b) => a.index - b.index);
+  } catch {} finally {
     poolsLoading.value = false;
   }
 };
 
 const getVPools = async () => {
   try {
-    const res = await fetch('/api/v1/pools/vpools', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/pools/vpools', {
+      errorLabel: t('virtual pools could not be loaded'),
+      showOverlay: false,
     });
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('virtual pools could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    vpools.value = await res.json();
-    vpools.value.sort((a, b) => a.index - b.index);
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
+    vpools.value = result.sort((a, b) => a.index - b.index);
+  } catch {} finally {
     vpoolsLoading.value = false;
   }
 };
@@ -1814,160 +2213,81 @@ const onDragEndVPool = async () => {
   };
 
   try {
-    const res = await fetch('/api/v1/pools/vpools/order', {
+    await call('/api/v1/pools/vpools/order', {
       method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('virtual pool order could not be saved'),
+      successLabel: t('virtual pool order saved successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('virtual pool order could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('virtual pool order saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch {}
 };
 
 const mountVPool = async (vpool) => {
-  overlay.value = true;
   try {
-    const res = await fetch(`/api/v1/pools/vpools/${vpool.id}/mount`, {
+    await call(`/api/v1/pools/vpools/${vpool.id}/mount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('virtual pool could not be mounted'),
+      successLabel: t('virtual pool mounted successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('virtual pool could not be mounted')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('virtual pool mounted successfully'));
     getVPools();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const unmountVPool = async (vpool) => {
-  overlay.value = true;
   try {
-    const res = await fetch(`/api/v1/pools/vpools/${vpool.id}/unmount`, {
+    await call(`/api/v1/pools/vpools/${vpool.id}/unmount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('virtual pool could not be unmounted'),
+      successLabel: t('virtual pool unmounted successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('virtual pool could not be unmounted')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('virtual pool unmounted successfully'));
     getVPools();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const deleteVPool = async (vpool) => {
-  overlay.value = true;
   try {
-    const res = await fetch(`/api/v1/pools/vpools/${vpool.id}`, {
+    await call(`/api/v1/pools/vpools/${vpool.id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('virtual pool could not be deleted'),
+      successLabel: t('virtual pool deleted successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('virtual pool could not be deleted')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('virtual pool deleted successfully'));
     getVPools();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const getUnassignedDisks = async () => {
   try {
-    const res = await fetch('/api/v1/disks/unassigned', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/disks/unassigned', {
+      errorLabel: t('unassigned disks could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('unassigned disks could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const Result = await res.json();
-    unassignedDisks.value = Result.unassignedDisks || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
+    unassignedDisks.value = result.unassignedDisks || [];
+  } catch {} finally {
     unassignedDisksLoading.value = false;
   }
 };
 
 const getFilesystems = async (pooltype = '') => {
+  const url = pooltype ? `/api/v1/disks/availablefilesystems?pooltype=${encodeURIComponent(pooltype)}` : '/api/v1/disks/availablefilesystems';
   try {
-    const url = pooltype ? `/api/v1/disks/availablefilesystems?pooltype=${encodeURIComponent(pooltype)}` : '/api/v1/disks/availablefilesystems';
-    const res = await fetch(url, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call(url, {
+      errorLabel: t('filesystems could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('filesystems could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const result = await res.json();
     return result || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
+  } catch {
     return [];
   }
 };
 
 const getPoolTypes = async () => {
   try {
-    const res = await fetch('/api/v1/pools/availablepooltypes', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call('/api/v1/pools/availablepooltypes', {
+      errorLabel: t('pool types could not be loaded'),
+      showOverlay: false,
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool types could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const result = await res.json();
     poolTypes.value = result || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch {}
 };
 
 const formatDisk = async () => {
@@ -1977,39 +2297,21 @@ const formatDisk = async () => {
     partition: formatDialog.partition,
     wipeExisting: formatDialog.wipeExisting,
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/disks/format`, {
+    await call('/api/v1/disks/format', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formatDiskData),
+      body: formatDiskData,
+      errorLabel: t('disk could not be formatted'),
+      successLabel: t('disk formatted successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('disk could not be formatted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('disk formatted successfully'));
-
-    clearFormatDialog();
     getPools();
     getUnassignedDisks();
     formatDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const createPool = async () => {
-  createPoolDialog.value = false;
-
   if (createPoolDialog.type === 'single') {
     createPoolSingle();
   } else if (createPoolDialog.type === 'mergerfs') {
@@ -2018,6 +2320,8 @@ const createPool = async () => {
     createPoolMulti();
   } else if (createPoolDialog.type === 'nonraid') {
     createPoolNonRaid();
+  } else if (createPoolDialog.type === 'bcachefs') {
+    createPoolBcachefs();
   }
 };
 
@@ -2032,6 +2336,8 @@ const createPoolMergerfs = async () => {
       comment: createPoolDialog.comment,
       mergerfsOptions: createPoolDialog.mergerfsOptions,
       snapraid: { device: createPoolDialog.snapraidDevice },
+      minfreespace: createPoolDialog.minfreespace,
+      moveonenospc: createPoolDialog.moveonenospc,
     },
     config: {
       shared: createPoolDialog.shared,
@@ -2041,33 +2347,18 @@ const createPoolMergerfs = async () => {
     passphrase: createPoolDialog.encrypted ? createPoolDialog.passphrase : null,
     skip_size_check: createPoolDialog.skip_size_check,
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/pools/mergerfs`, {
+    await call('/api/v1/pools/mergerfs', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(createPoolData),
+      body: createPoolData,
+      errorLabel: t('pool could not be created'),
+      successLabel: t('pool created successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool created successfully'));
-
-    clearCreatePoolDialog();
+    createPoolDialog.value = false;
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const createPoolNonRaid = async () => {
@@ -2081,6 +2372,8 @@ const createPoolNonRaid = async () => {
       automount: createPoolDialog.automount,
       comment: createPoolDialog.comment,
       policies: createPoolDialog.policies,
+      minfreespace: createPoolDialog.minfreespace,
+      moveonenospc: createPoolDialog.moveonenospc,
     },
     config: {
       shared: createPoolDialog.shared,
@@ -2089,33 +2382,55 @@ const createPoolNonRaid = async () => {
     },
     passphrase: createPoolDialog.encrypted ? createPoolDialog.passphrase : null,
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/pools/nonraid`, {
+    await call('/api/v1/pools/nonraid', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(createPoolData),
+      body: createPoolData,
+      errorLabel: t('pool could not be created'),
+      successLabel: t('pool created successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool created successfully'));
-
-    clearCreatePoolDialog();
+    createPoolDialog.value = false;
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
+};
+
+const createPoolBcachefs = async () => {
+  const createPoolData = {
+    name: createPoolDialog.name,
+    devices: createPoolDialog.devices,
+    cache_devices: createPoolDialog.cache_devices,
+    format: createPoolDialog.format,
+    config: {
+      shared: createPoolDialog.shared,
+      encrypted: createPoolDialog.encrypted,
+      create_keyfile: createPoolDialog.encrypted ? createPoolDialog.create_keyfile : false,
+      data_replicas: createPoolDialog.data_replicas,
+      metadata_replicas: createPoolDialog.metadata_replicas,
+      erasure_code: createPoolDialog.erasure_code,
+      compression: createPoolDialog.compression,
+      background_compression: createPoolDialog.background_compression,
+      cache_mode: createPoolDialog.cache_mode,
+    },
+    options: {
+      automount: createPoolDialog.automount,
+      comment: createPoolDialog.comment,
+    },
+    passphrase: createPoolDialog.encrypted ? createPoolDialog.passphrase : null,
+  };
+
+  try {
+    await call('/api/v1/pools/bcachefs', {
+      method: 'POST',
+      body: createPoolData,
+      errorLabel: t('pool could not be created'),
+      successLabel: t('pool created successfully'),
+    });
+    createPoolDialog.value = false;
+    getPools();
+    getUnassignedDisks();
+  } catch {}
 };
 
 const createPoolMulti = async () => {
@@ -2134,33 +2449,18 @@ const createPoolMulti = async () => {
     },
     passphrase: createPoolDialog.encrypted ? createPoolDialog.passphrase : null,
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/pools/multi`, {
+    await call('/api/v1/pools/multi', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(createPoolData),
+      body: createPoolData,
+      errorLabel: t('pool could not be created'),
+      successLabel: t('pool created successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool created successfully'));
-
-    clearCreatePoolDialog();
+    createPoolDialog.value = false;
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const createPoolSingle = async () => {
@@ -2179,378 +2479,191 @@ const createPoolSingle = async () => {
     },
     passphrase: createPoolDialog.encrypted ? createPoolDialog.passphrase : null,
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/pools/single`, {
+    await call('/api/v1/pools/single', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(createPoolData),
+      body: createPoolData,
+      errorLabel: t('pool could not be created'),
+      successLabel: t('pool created successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool created successfully'));
-
-    clearCreatePoolDialog();
+    createPoolDialog.value = false;
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
-const createVPool = async() => {
+const createVPool = async () => {
   const payload = {
     name: createVpoolDialog.name,
     paths: createVpoolDialog.paths,
     options: {
       automount: createVpoolDialog.automount,
       comment: createVpoolDialog.comment,
-      policies: createVpoolDialog.config.policies,
     },
     config: {
+      policies: createVpoolDialog.config.policies,
       shared: createVpoolDialog.config.shared,
     },
   };
-  overlay.value = true;
 
   try {
-    const res = await fetch(`/api/v1/pools/vpools`, {
+    await call('/api/v1/pools/vpools', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('virtual pool could not be created'),
+      successLabel: t('virtual pool created successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('virtual pool could not be created')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('virtual pool created successfully'));
     getVPools();
     createVpoolDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const deletePool = async (poolId) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}`, {
+    await call(`/api/v1/pools/${poolId}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('pool could not be deleted'),
+      successLabel: t('pool deleted successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be deleted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool deleted successfully'));
-
-    clearDeletePoolDialog();
     getPools();
     getUnassignedDisks();
     getPoolTypes();
     deletePoolDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const switchAutomount = async (pool) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${pool.id}/automount`, {
+    await call(`/api/v1/pools/${pool.id}/automount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ enabled: pool.automount }),
+      body: { enabled: pool.automount },
+      errorLabel: t('could not change automount setting'),
+      successLabel: t('automount setting changed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('could not change automount setting')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('automount setting changed successfully'));
-
     getPools();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const switchVPoolAutomount = async (vpool) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/vpools/${vpool.id}/automount`, {
+    await call(`/api/v1/pools/vpools/${vpool.id}/automount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ enabled: vpool.automount }),
+      body: { enabled: vpool.automount },
+      errorLabel: t('could not change automount setting'),
+      successLabel: t('automount setting changed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('could not change automount setting')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('automount setting changed successfully'));
-
     getVPools();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const unmountPool = async (pool) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${pool.id}/unmount`, {
+    await call(`/api/v1/pools/${pool.id}/unmount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('pool could not be unmounted'),
+      successLabel: t('pool unmounted successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be unmounted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('pool unmounted successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const mountPool = async (pool) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${pool.id}/mount`, {
+    await call(`/api/v1/pools/${pool.id}/mount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+      errorLabel: t('pool could not be mounted'),
+      successLabel: t('pool mounted successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be mounted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool mounted successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const mountPoolWithPassphrase = async (pool, passphrase) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${pool.id}/mount`, {
+    await call(`/api/v1/pools/${pool.id}/mount`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ passphrase: passphrase }),
+      body: { passphrase },
+      errorLabel: t('pool could not be mounted'),
+      successLabel: t('pool mounted successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be mounted')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool mounted successfully'));
     getPools();
     getUnassignedDisks();
     passphraseDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
+};
+
+const syncManagedPoolViews = (poolId) => {
+  const updated = pools.value.find((p) => p.id === poolId);
+  if (!updated) return;
+  if (manageMergerfsDevicesDialog.pool?.id === poolId) manageMergerfsDevicesDialog.pool = updated;
+  if (manageMergerfsParityDevicesDialog.pool?.id === poolId) manageMergerfsParityDevicesDialog.pool = updated;
+  if (manageNonRaidDevicesDialog.pool?.id === poolId) manageNonRaidDevicesDialog.pool = updated;
+  if (manageNonRaidParityDevicesDialog.pool?.id === poolId) manageNonRaidParityDevicesDialog.pool = updated;
 };
 
 const addMergerfsParityDevice = async (poolId, devices, format, skipSizeCheck) => {
-  overlay.value = true;
-  const addParityData = {
-    devices: devices,
-    format: format,
-    skipSizeCheck: skipSizeCheck,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/parity/add`, {
+    await call(`/api/v1/pools/${poolId}/parity/add`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(addParityData),
+      body: { devices, format, skipSizeCheck },
+      errorLabel: t('parity device could not be added'),
+      successLabel: t('parity device added successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('parity device could not be added')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('parity device added successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
-    addParityDevicesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    addMergerfsParityDevicesDialog.value = false;
+  } catch {}
 };
 
 const removeMergerfsParityDevice = async (poolId, devices, unmount) => {
-  overlay.value = true;
-  const removeParityData = {
-    devices: devices,
-    unmount: unmount,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/parity/remove`, {
+    await call(`/api/v1/pools/${poolId}/parity/remove`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(removeParityData),
+      body: { devices, unmount },
+      errorLabel: t('parity device could not be removed'),
+      successLabel: t('parity device removed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('parity device could not be removed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('parity device removed successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
-    removeParityDevicesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    removeMergerfsParityDevicesDialog.value = false;
+  } catch {}
 };
 
 const replaceMergerfsParityDevice = async (poolId, oldDevice, newDevice, format, skipSizeCheck) => {
-  overlay.value = true;
-  const payload = {
-    oldDevice: oldDevice,
-    newDevice: newDevice,
-    format: format,
-    skipSizeCheck: skipSizeCheck,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/parity/replace`, {
+    await call(`/api/v1/pools/${poolId}/parity/replace`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: { oldDevice, newDevice, format, skipSizeCheck },
+      errorLabel: t('parity device could not be replaced'),
+      successLabel: t('parity device replaced successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('parity device could not be replaced')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('parity device replaced successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    replaceMergerfsParityDeviceDialog.value = false;
+  } catch {}
 };
 
 const performSnapraidOperation = async (poolId, operation) => {
-  overlay.value = true;
-  const commandData = {
-    operation: operation,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/parity`, {
+    await call(`/api/v1/pools/${poolId}/parity`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(commandData),
+      body: { operation },
+      errorLabel: t('snapraid operation could not be executed'),
+      successLabel: t('snapraid operation executed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('snapraid operation could not be executed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('snapraid operation executed successfully'));
     getPools();
     getUnassignedDisks();
     snapraidOperationDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const performNonRaidOperation = async (poolId, operation, option) => {
-  overlay.value = true;
   if (operation != 'check') {
     option = null;
   }
@@ -2561,569 +2674,262 @@ const performNonRaidOperation = async (poolId, operation, option) => {
   };
 
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/parity`, {
+    await call(`/api/v1/pools/${poolId}/parity`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('nonraid operation could not be executed'),
+      successLabel: t('nonraid operation executed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('nonraid operation could not be executed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('nonraid operation executed successfully'));
     getPools();
     getUnassignedDisks();
     nonRaidOperationDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const performMultiOperationScrub = async (poolId, option) => {
-  overlay.value = true;
-  const payload = {
-    operation: option,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/btrfs/scrub`, {
+    await call(`/api/v1/pools/${poolId}/btrfs/scrub`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: { operation: option },
+      errorLabel: t('btrfs scrub could not be executed'),
+      successLabel: t('btrfs scrub executed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('btrfs scrub could not be executed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('btrfs scrub executed successfully'));
     getPools();
     getUnassignedDisks();
     multiOperationDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const performMultiOperationBalance = async (poolId, option) => {
-  overlay.value = true;
-  const payload = {
-    operation: option,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/btrfs/balance`, {
+    await call(`/api/v1/pools/${poolId}/btrfs/balance`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: { operation: option },
+      errorLabel: t('btrfs balance could not be executed'),
+      successLabel: t('btrfs balance executed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('btrfs balance could not be executed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('btrfs balance executed successfully'));
     getPools();
     getUnassignedDisks();
     multiOperationDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
-const saveSnapraidSchedules = async (id, sync) => {
-  overlay.value = true;
-  const configData = {
-    sync: sync,
-  };
-
+const saveBtrfsSettings = async () => {
   try {
-    const res = await fetch(`/api/v1/pools/${id}/config`, {
+    await call(`/api/v1/pools/${btrfsSettingsDialog.pool.id}/config`, {
       method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
+      body: {
+        scrub: btrfsSettingsDialog.scrub,
+        balance: btrfsSettingsDialog.balance,
+        usage_alert: btrfsSettingsDialog.usage_alert,
       },
-      body: JSON.stringify(configData),
+      errorLabel: t('btrfs settings could not be saved'),
+      successLabel: t('btrfs settings saved successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('snapraid schedules could not be saved')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('snapraid schedules saved successfully'));
     getPools();
-    getUnassignedDisks();
-    snapraidSchedulesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    btrfsSettingsDialog.value = false;
+  } catch {}
 };
 
-const saveNonRaidCheckSchedule = async (id, check) => {
-  overlay.value = true;
-  const configData = {
-    check: check,
-  };
-
+const saveMergerfsSettings = async () => {
   try {
-    const res = await fetch(`/api/v1/pools/${id}/config`, {
+    await call(`/api/v1/pools/${mergerfsSettingsDialog.pool.id}/config`, {
       method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
+      body: {
+        snapraid: mergerfsSettingsDialog.snapraid_sync,
+        policies: mergerfsSettingsDialog.mergerfs_policies,
+        usage_alert: mergerfsSettingsDialog.usage_alert,
       },
-      body: JSON.stringify(configData),
+      errorLabel: t('mergerfs settings could not be saved'),
+      successLabel: t('mergerfs settings saved successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('check schedule could not be saved')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('check schedule saved successfully'));
     getPools();
-    getUnassignedDisks();
-    nonRaidSchedulesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    mergerfsSettingsDialog.value = false;
+  } catch {}
 };
 
-const saveMultiSchedules = async (id, scrub, balance) => {
-  overlay.value = true;
-  const configData = {
-    scrub: scrub,
-    balance: balance,
-  };
-
+const saveNonraidSettings = async () => {
   try {
-    const res = await fetch(`/api/v1/pools/${id}/config`, {
+    await call(`/api/v1/pools/${nonraidSettingsDialog.pool.id}/config`, {
       method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
+      body: {
+        check: nonraidSettingsDialog.check,
+        usage_alert: nonraidSettingsDialog.usage_alert,
       },
-      body: JSON.stringify(configData),
+      errorLabel: t('nonraid settings could not be saved'),
+      successLabel: t('nonraid settings saved successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('schedules could not be saved')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('schedules saved successfully'));
     getPools();
-    getUnassignedDisks();
-    multiSchedulesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+    nonraidSettingsDialog.value = false;
+  } catch {}
 };
 
 const addMergerfsDevices = async (poolId, devices, format, passphrase, skipSizeCheck) => {
-  overlay.value = true;
-  const payload = {
-    devices: devices,
-    format: format,
-    passphrase: passphrase,
-    skip_size_check: skipSizeCheck,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/devices/add`, {
+    await call(`/api/v1/pools/${poolId}/devices/add`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: { devices, format, passphrase, skip_size_check: skipSizeCheck },
+      errorLabel: t('device could not be added'),
+      successLabel: t('device added successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('device could not be added')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('device added successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
     addMergerfsDevicesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const removeMergerfsDevice = async (poolId, devices, unmount) => {
-  overlay.value = true;
-  const removeDeviceData = {
-    devices: devices,
-    unmount: unmount,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/devices/remove`, {
+    await call(`/api/v1/pools/${poolId}/devices/remove`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(removeDeviceData),
+      body: { devices, unmount },
+      errorLabel: t('device could not be removed'),
+      successLabel: t('device removed successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('device could not be removed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('device removed successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
     removeMergerfsDevicesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const replaceMergerfsDevice = async (poolId, oldDevice, newDevice, format) => {
-  overlay.value = true;
-  const replaceDeviceData = {
-    oldDevice: oldDevice,
-    newDevice: newDevice,
-    format: format,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/devices/replace`, {
+    await call(`/api/v1/pools/${poolId}/devices/replace`, {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(replaceDeviceData),
+      body: { oldDevice, newDevice, format },
+      errorLabel: t('device could not be replaced'),
+      successLabel: t('device replaced successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('device could not be replaced')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('device replaced successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
     replaceMergerfsDeviceDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
+};
+
+const replaceNonRaidDevice = async (pool, oldDevice, newDevice, format, passphrase) => {
+  const selectedDevice = pool?.data_devices?.find((device) => device.device === oldDevice);
+
+  try {
+    if (!selectedDevice || selectedDevice.slot == null) {
+      throw new Error('Could not determine replacement slot');
+    }
+
+    const body = {
+      replacements: [{ slot: String(selectedDevice.slot), newDevice }],
+      format,
+      passphrase,
+    };
+
+    await call(`/api/v1/pools/nonraid/replace`, {
+      method: 'POST',
+      body,
+      errorLabel: t('device could not be replaced'),
+      successLabel: t('device replaced successfully'),
+    });
+    await getPools();
+    getUnassignedDisks();
+    replaceNonRaidDeviceDialog.value = false;
+  } catch {}
 };
 
 const wakePool = async (pool) => {
-  overlay.value = true;
-  const wakePoolData = {
-    devices: [...(pool.data_devices ? pool.data_devices.map((d) => d.device) : []), ...(pool.parity_devices ? pool.parity_devices.map((d) => d.device) : [])],
-  };
+  const devices = [...(pool.data_devices ? pool.data_devices.map((d) => d.device) : []), ...(pool.parity_devices ? pool.parity_devices.map((d) => d.device) : [])];
 
   try {
-    const res = await fetch(`/api/v1/disks/wake`, {
+    await call('/api/v1/disks/wake', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(wakePoolData),
+      body: { devices },
+      errorLabel: t('pool could not be woken up'),
+      successLabel: t('pool woken up successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be woken up')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool woken up successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const sleepPool = async (pool) => {
-  overlay.value = true;
-  const sleepPoolData = {
-    devices: [...(pool.data_devices ? pool.data_devices.map((d) => d.device) : []), ...(pool.parity_devices ? pool.parity_devices.map((d) => d.device) : [])],
-  };
+  const devices = [...(pool.data_devices ? pool.data_devices.map((d) => d.device) : []), ...(pool.parity_devices ? pool.parity_devices.map((d) => d.device) : [])];
 
   try {
-    const res = await fetch(`/api/v1/disks/sleep`, {
+    await call('/api/v1/disks/sleep', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(sleepPoolData),
+      body: { devices },
+      errorLabel: t('pool could not be put to sleep'),
+      successLabel: t('pool put to sleep successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('pool could not be put to sleep')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool put to sleep successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const wakeDisk = async (disk) => {
-  overlay.value = true;
-  const wakeDiskData = {
-    devices: [disk.device],
-  };
-
   try {
-    const res = await fetch(`/api/v1/disks/wake`, {
+    await call('/api/v1/disks/wake', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(wakeDiskData),
+      body: { devices: [disk.device] },
+      errorLabel: t('disk could not be woken up'),
+      successLabel: t('disk woken up successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('disk could not be woken up')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('disk woken up successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const sleepDisk = async (disk) => {
-  overlay.value = true;
-  const sleepDiskData = {
-    devices: [disk.device],
-  };
-
   try {
-    const res = await fetch(`/api/v1/disks/sleep`, {
+    await call('/api/v1/disks/sleep', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(sleepDiskData),
+      body: { devices: [disk.device] },
+      errorLabel: t('disk could not be put to sleep'),
+      successLabel: t('disk put to sleep successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('disk could not be put to sleep')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('disk put to sleep successfully'));
     getPools();
     getUnassignedDisks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const addNonRaidDevice = async (device, filesystem, passphrase, parity_valid, format) => {
-  overlay.value = true;
-  const addDeviceData = {
-    device: device,
-    filesystem: filesystem,
-    passphrase: passphrase,
-    parity_valid: parity_valid,
-    format: format,
-  };
-
   try {
-    const res = await fetch(`/api/v1/pools/nonraid/adddevice`, {
+    await call('/api/v1/pools/nonraid/adddevice', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(addDeviceData),
+      body: { device, filesystem, passphrase, parity_valid, format },
+      errorLabel: t('device could not be added'),
+      successLabel: t('device added successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('device could not be added')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('device added successfully'));
-    getPools();
+    const poolId = manageNonRaidDevicesDialog.pool?.id;
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
     addNonRaidDeviceDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
-const addNonRaidParity = async (device) => {
-  overlay.value = true;
-  const addParityData = {
-    device: device,
-  };
-
+const addNonRaidParity = async (poolId, device) => {
   try {
-    const res = await fetch(`/api/v1/pools/nonraid/addparity`, {
+    await call('/api/v1/pools/nonraid/addparity', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(addParityData),
+      body: { device },
+      errorLabel: t('parity device could not be added'),
+      successLabel: t('parity device added successfully'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('parity device could not be added')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('parity device added successfully'));
-    getPools();
+    await getPools();
+    syncManagedPoolViews(poolId);
     getUnassignedDisks();
     addNonRaidParityDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const getMergerfsPolicies = async (poolId) => {
-  overlay.value = true;
-
   try {
-    const res = await fetch(`/api/v1/pools/${poolId}/config`, {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const result = await call(`/api/v1/pools/${poolId}/config`, {
+      errorLabel: t('mergerfs policies could not be loaded'),
     });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('mergerfs policies could not be loaded')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    const result = await res.json();
-    return result.policies || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
-};
-
-const changeMergerfsPolicies = async (poolId, policies) => {
-  overlay.value = true;
-  const payload = {
-    policies: policies,
-  };
-
-  try {
-    const res = await fetch(`/api/v1/pools/${poolId}/config`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('mergerfs policies could not be changed')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('mergerfs policies changed successfully'));
-    getPools();
-    mergerfsPolicyDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
-};
-
-const saveUsageAlerts = async (poolId, usageAlert) => {
-  overlay.value = true;
-  const payload = {
-    usage_alert: usageAlert,
-  };
-
-  try {
-    const res = await fetch(`/api/v1/pools/${poolId}/config`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errorDetails = await res.json();
-      throw new Error(`${t('usage alert settings could not be saved')}|$| ${errorDetails.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('usage alert settings saved successfully'));
-    getPools();
-    usageAlertsDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+    return result.policies || {};
+  } catch {
+    return {};
   }
 };
 
@@ -3136,24 +2942,13 @@ const onDragEndPool = async () => {
   };
 
   try {
-    const res = await fetch('/api/v1/pools/order', {
+    await call('/api/v1/pools/order', {
       method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('pool order could not be saved'),
+      successLabel: t('pool order saved successfully'),
     });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('pool order could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('pool order saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch {}
 };
 
 const getDiskIcon = (type) => {
@@ -3179,10 +2974,13 @@ const switchPoolType = async () => {
   createPoolDialog.devices = [];
   createPoolDialog.snapraidDevice = [];
   createPoolDialog.parity = [];
+  createPoolDialog.cache_devices = [];
 
   createPoolDialog.filesystems = await getFilesystems(createPoolDialog.type);
   if (createPoolDialog.type === 'single' || createPoolDialog.type === 'mergerfs') {
     createPoolDialog.filesystem = 'xfs';
+  } else if (createPoolDialog.type === 'bcachefs') {
+    createPoolDialog.filesystem = 'bcachefs';
   } else {
     createPoolDialog.filesystem = 'btrfs';
   }
@@ -3195,35 +2993,6 @@ const switchPoolType = async () => {
       return;
     }
   }
-};
-
-const clearCreatePoolDialog = () => {
-  createPoolDialog.value = false;
-  createPoolDialog.disk = null;
-  createPoolDialog.name = '';
-  createPoolDialog.type = 'single';
-  createPoolDialog.devices = [];
-  createPoolDialog.filesystem = '';
-  createPoolDialog.automount = true;
-  createPoolDialog.raidLevel = '';
-  createPoolDialog.comment = '';
-  createPoolDialog.mergerfsOptions = '';
-  createPoolDialog.snapraidDevice = [];
-  createPoolDialog.format = false;
-  createPoolDialog.encrypted = false;
-  createPoolDialog.create_keyfile = true;
-  createPoolDialog.passphrase = '';
-};
-const clearFormatDialog = () => {
-  formatDialog.value = false;
-  formatDialog.disk = null;
-  formatDialog.filesystem = '';
-  formatDialog.partition = true;
-  formatDialog.wipeExisting = true;
-};
-const clearDeletePoolDialog = () => {
-  deletePoolDialog.value = false;
-  deletePoolDialog.pool = null;
 };
 
 const getUsageColor = (usagePercent) => {
