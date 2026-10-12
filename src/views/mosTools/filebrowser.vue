@@ -129,9 +129,9 @@
                     <span class="text-caption">{{ item.displayPath || item.path }}</span>
                   </td>
                   <td>
-                    <div class="d-flex align-center ga-1">
-                      <span v-if="item.calculated_size_human" class="text-caption">{{ item.calculated_size_human }}</span>
-                      <span v-else-if="item.type !== 'directory'" class="text-caption">{{ item.size_human }}</span>
+                    <div class="d-flex align-center ga-1" style="overflow: hidden">
+                      <span v-if="item.calculated_size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ item.calculated_size_human }}</span>
+                      <span v-else-if="item.type !== 'directory'" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ item.size_human }}</span>
                       <v-btn
                         v-if="item.type === 'directory'"
                         variant="text"
@@ -1223,12 +1223,12 @@ const addDirectoryAsBookmark = async (item) => {
 }
 .size-column {
   width: 10%;
-  min-width: 100px;
+  min-width: 200px;
 }
 @media (max-width: 768px) {
   .size-column {
     width: 15%;
-    min-width: 120px;
+    min-width: 200px;
   }
 }
 </style>

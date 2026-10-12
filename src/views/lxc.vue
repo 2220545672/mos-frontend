@@ -22,7 +22,7 @@
                   <th style="min-width: 160px; padding: 4px 8px; vertical-align: middle">{{ $t('backups') }} / {{ $t('snapshots') }}</th>
                   <th style="min-width: 100px; padding: 4px 8px; vertical-align: middle">{{ $t('cpu') }}</th>
                   <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('memory') }}</th>
-                  <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
+                  <th style="min-width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
                   <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('ip') }}</th>
                   <th style="width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('autostart') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle"></th>
@@ -124,8 +124,8 @@
                     </td>
 
                     <td style="padding: 4px 8px; vertical-align: middle">
-                      <div class="d-flex align-center ga-1">
-                        <span v-if="lxc.storage_size_human" class="text-caption">{{ lxc.storage_size_human }}</span>
+                      <div class="d-flex align-center ga-1" style="overflow: hidden">
+                        <span v-if="lxc.storage_size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ lxc.storage_size_human }}</span>
                         <v-btn
                           variant="text"
                           icon

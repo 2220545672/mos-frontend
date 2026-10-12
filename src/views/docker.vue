@@ -22,7 +22,7 @@
                   <th style="min-width: 150px; padding: 4px 8px; vertical-align: middle">
                     {{ $t('image') }}
                   </th>
-                  <th style="width: 150px; padding: 4px 8px; vertical-align: middle">{{ $t('size') }}</th>
+                  <th style="width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('size') }}</th>
                   <th style="width: 250px; padding: 4px 8px; vertical-align: middle">{{ $t('ports') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('ip address') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('network') }}</th>
@@ -180,8 +180,8 @@
                     </td>
                     <td>&nbsp;</td>
                     <td style="padding: 4px 8px; vertical-align: middle">
-                      <div class="d-flex align-center ga-1">
-                        <span v-if="group.size_human" class="text-caption">
+                      <div class="d-flex align-center ga-1" style="overflow: hidden">
+                        <span v-if="group.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ group.size_human }}
                         </span>
                         <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllGroupSizes(group)" :title="$t('calculate directory size')" color="primary">
@@ -340,8 +340,8 @@
                     </td>
 
                     <td style="padding: 4px 8px; vertical-align: middle">
-                      <div class="d-flex align-center ga-1">
-                        <span v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human" class="text-caption">
+                      <div class="d-flex align-center ga-1" style="overflow: hidden">
+                        <span v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human }}
                         </span>
                         <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">
@@ -565,8 +565,8 @@
                     </td>
                     <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ docker.Image }}</td>
                     <td style="padding: 4px 8px; vertical-align: middle">
-                      <div class="d-flex align-center ga-1">
-                        <span v-if="docker.size_human" class="text-caption">
+                      <div class="d-flex align-center ga-1" style="overflow: hidden">
+                        <span v-if="docker.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ docker.size_human }}
                         </span>
                         <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">

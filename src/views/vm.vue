@@ -21,7 +21,7 @@
                   <th style="min-width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('description') }}</th>
                   <th style="min-width: 40px; padding: 4px 8px; vertical-align: middle">{{ $t('cpu load') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('disks') }}</th>
-                  <th style="min-width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
+                  <th style="min-width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('storage') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('port') }}</th>
                   <th style="width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('autostart') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle">{{ $t('info') }}</th>
@@ -125,8 +125,8 @@
                     <span v-else>-</span>
                   </td>
                   <td style="padding: 4px 8px; vertical-align: middle">
-                    <div class="d-flex align-center ga-1">
-                      <span v-if="vm.storage_size_human" class="text-caption">{{ vm.storage_size_human }}</span>
+                    <div class="d-flex align-center ga-1" style="overflow: hidden">
+                      <span v-if="vm.storage_size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ vm.storage_size_human }}</span>
                       <v-btn variant="text" icon size="x-small" :loading="vm.calculating_storage" @click.stop="calculateVMSize(vm)" :title="$t('calculate directory size')" color="primary">
                         <v-icon size="16">mdi-calculator</v-icon>
                       </v-btn>
