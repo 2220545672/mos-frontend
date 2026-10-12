@@ -651,6 +651,7 @@ const getNetworkSettings = async () => {
       '/api/v1/mos/settings/network/interfaces',
       {
         errorLabel: t('network settings could not be loaded'),
+        showOverlay: false,
       }
     );
 

@@ -9,6 +9,7 @@ interface ApiCallOptions {
   body?: unknown;
   errorLabel: string;
   successLabel?: string;
+  showOverlay?: boolean;
 }
 
 interface ApiErrorResponse {
@@ -24,9 +25,9 @@ export function useApi() {
   });
 
   const call = async <T = unknown>(url: string, options: ApiCallOptions): Promise<T | null> => {
-    const { method = 'GET', body, errorLabel, successLabel } = options;
+    const { method = 'GET', body, errorLabel, successLabel, showOverlay = true } = options;
 
-    overlay.value = true;
+    if (showOverlay) overlay.value = true;
     try {
       const res = await fetch(url, {
         method,
@@ -48,7 +49,7 @@ export function useApi() {
       showSnackbarError(userMessage, apiErrorMessage);
       throw e;
     } finally {
-      overlay.value = false;
+      if (showOverlay) overlay.value = false;
     }
   };
 

@@ -357,6 +357,7 @@ const getLXCService = async () => {
   try {
     return await call('/api/v1/mos/settings/lxc', {
       errorLabel: t('lxc service could not be loaded'),
+      showOverlay: false,
     });
   } catch (e) {
     return null;
@@ -368,6 +369,7 @@ const getLxcSnapshots = async () => {
     snapshots.value =
       (await call(`/api/v1/lxc/containers/${props.lxc}/snapshots`, {
         errorLabel: t('lxc snapshots could not be loaded'),
+        showOverlay: false,
       })) || [];
   } catch (e) {
   } finally {

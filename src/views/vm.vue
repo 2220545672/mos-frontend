@@ -1284,6 +1284,7 @@ const getVMs = async () => {
   try {
     const result = await call('/api/v1/vm/machines', {
       errorLabel: t('Could not fetch VMs'),
+      showOverlay: false,
     });
     vms.value = result;
   } catch (e) {
@@ -1296,6 +1297,7 @@ const getVmUsage = async () => {
   try {
     const result = await call('/api/v1/vm/machines/usage', {
       errorLabel: t('Could not fetch VM usage'),
+      showOverlay: false,
     });
     vmUsage.value = result;
   } catch (e) {
@@ -1584,6 +1586,7 @@ const getSystemInfo = async () => {
   try {
     const data = await call('/api/v1/system/load', {
       errorLabel: t('Could not fetch memory info'),
+      showOverlay: false,
     });
     systemInfo.value = data;
     availableSystemMemory.value = Math.floor(data.memory.total / (1024 * 1024 * 1024));
@@ -1596,6 +1599,7 @@ const getPCIeDevices = async () => {
   try {
     const pcieDevicesRaw = await call('/api/v1/system/devices/pci', {
       errorLabel: t('Could not fetch PCIe devices'),
+      showOverlay: false,
     });
     pcieDevices.value = pcieDevicesRaw.reduce((reduced, dev) => {
       const fullAddress = dev.slot.includes(':') && dev.slot.split(':')[0].length === 2 ? `0000:${dev.slot}` : dev.slot;
@@ -1610,6 +1614,7 @@ const getUSBDevices = async () => {
   try {
     const usbDevicesRaw = await call('/api/v1/system/devices/usb', {
       errorLabel: t('Could not fetch USB devices'),
+      showOverlay: false,
     });
     usbDevices.value = usbDevicesRaw.reduce((reduced, dev) => {
       const key = `${dev.vendor_id}:${dev.product_id}`;
@@ -1624,6 +1629,7 @@ const getVmCapabilities = async () => {
   try {
     const data = await call('/api/v1/vm/capabilities', {
       errorLabel: t('Could not fetch VM capabilities'),
+      showOverlay: false,
     });
     vmCapabilities.value = data;
   } catch (e) {

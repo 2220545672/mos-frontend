@@ -435,12 +435,15 @@ const getLXCs = async () => {
     const [result, mosResult, usageResult] = await Promise.all([
       call('/api/v1/lxc/containers', {
         errorLabel: t('lxc containers could not be loaded'),
+        showOverlay: false,
       }),
       call('/api/v1/lxc/mos/containers', {
         errorLabel: t('lxc mos data could not be loaded'),
+        showOverlay: false,
       }),
       call('/api/v1/lxc/containers/usage', {
         errorLabel: t('lxc usage data could not be loaded'),
+        showOverlay: false,
       }),
     ]);
 
@@ -476,6 +479,7 @@ const getImages = async () => {
   try {
     const imagesResult = await call('/api/v1/lxc/images', {
       errorLabel: t('lxc images could not be loaded'),
+      showOverlay: false,
     });
 
     images.value = Object.keys(imagesResult.distributions).map((key) => ({

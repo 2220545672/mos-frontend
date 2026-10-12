@@ -217,6 +217,7 @@ const getUser = async () => {
   try {
     const result = await call('/api/v1/auth/profile', {
       errorLabel: t('profile could not be loaded'),
+      showOverlay: false,
     });
     selectedByteFormat.value = result.byte_format || 'binary';
     darkMode.value = result.darkmode ? 'dark' : 'light';
@@ -265,6 +266,7 @@ const getUiSessionExpiry = async () => {
   try {
     const result = await call(`/api/v1/auth/jwt-settings`, {
       errorLabel: t('ui session expiry could not be loaded'),
+      showOverlay: false,
     });
     if (result) expiryDays.value = result.expiryDays;
   } catch {}

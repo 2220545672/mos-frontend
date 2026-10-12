@@ -2184,6 +2184,7 @@ const getPools = async () => {
   try {
     const result = await call('/api/v1/pools', {
       errorLabel: t('pools could not be loaded'),
+      showOverlay: false,
     });
     pools.value = result.sort((a, b) => a.index - b.index);
   } catch {} finally {
@@ -2195,6 +2196,7 @@ const getVPools = async () => {
   try {
     const result = await call('/api/v1/pools/vpools', {
       errorLabel: t('virtual pools could not be loaded'),
+      showOverlay: false,
     });
     vpools.value = result.sort((a, b) => a.index - b.index);
   } catch {} finally {
@@ -2257,6 +2259,7 @@ const getUnassignedDisks = async () => {
   try {
     const result = await call('/api/v1/disks/unassigned', {
       errorLabel: t('unassigned disks could not be loaded'),
+      showOverlay: false,
     });
     unassignedDisks.value = result.unassignedDisks || [];
   } catch {} finally {
@@ -2269,6 +2272,7 @@ const getFilesystems = async (pooltype = '') => {
   try {
     const result = await call(url, {
       errorLabel: t('filesystems could not be loaded'),
+      showOverlay: false,
     });
     return result || [];
   } catch {
@@ -2280,6 +2284,7 @@ const getPoolTypes = async () => {
   try {
     const result = await call('/api/v1/pools/availablepooltypes', {
       errorLabel: t('pool types could not be loaded'),
+      showOverlay: false,
     });
     poolTypes.value = result || [];
   } catch {}

@@ -670,6 +670,7 @@ const loadPath = async (path = '/') => {
 
     const data = await call(url.pathname + url.search, {
       errorLabel: t('filesystem could not be loaded'),
+      showOverlay: false,
     });
 
     currentPath.value = data.currentPath || path || '/';
@@ -830,6 +831,7 @@ const getRunningOperations = async () => {
   try {
     const data = await call('/api/v1/mos/runningfsoperations', {
       errorLabel: t('could not fetch running operations'),
+      showOverlay: false,
     });
     runningProcesses.value = data?.count || 0;
   } catch (e) {}
