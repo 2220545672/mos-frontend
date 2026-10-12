@@ -691,6 +691,7 @@ const getMounts = async (lxc) => {
   try {
     return await call(`/api/v1/lxc/containers/${lxc.name}/mounts`, {
       errorLabel: t('mounts could not be loaded'),
+      showOverlay: false,
     });
   } catch (e) {
     return [];

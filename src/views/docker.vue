@@ -22,6 +22,7 @@
                   <th style="min-width: 150px; padding: 4px 8px; vertical-align: middle">
                     {{ $t('image') }}
                   </th>
+                  <th style="width: 150px; padding: 4px 8px; vertical-align: middle">{{ $t('size') }}</th>
                   <th style="width: 250px; padding: 4px 8px; vertical-align: middle">{{ $t('ports') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('ip address') }}</th>
                   <th style="padding: 4px 8px; vertical-align: middle">{{ $t('network') }}</th>
@@ -178,6 +179,16 @@
                       <v-icon v-else style="color: green">mdi-check</v-icon>
                     </td>
                     <td>&nbsp;</td>
+                    <td style="padding: 4px 8px; vertical-align: middle">
+                      <div class="d-flex align-center ga-1">
+                        <span v-if="group.size_human" class="text-caption">
+                          {{ group.size_human }}
+                        </span>
+                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllGroupSizes(group)" :title="$t('calculate directory size')" color="primary">
+                          <v-icon size="16">mdi-calculator</v-icon>
+                        </v-btn>
+                      </div>
+                    </td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
@@ -328,6 +339,17 @@
                       {{ dockers.find((d) => d.Names && d.Names[0] === containerName)?.Image }}
                     </td>
 
+                    <td style="padding: 4px 8px; vertical-align: middle">
+                      <div class="d-flex align-center ga-1">
+                        <span v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human" class="text-caption">
+                          {{ dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human }}
+                        </span>
+                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">
+                          <v-icon size="16">mdi-calculator</v-icon>
+                        </v-btn>
+                      </div>
+                    </td>
+
                     <td>
                       <template
                         v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.Ports && dockers.find((d) => d.Names && d.Names[0] === containerName)?.Ports.some((p) => p.PublicPort)"
@@ -449,7 +471,7 @@
 
               <!-- Separator Row -->
               <tr v-if="filteredDockerGroups.length > 0 && filteredUngroupedDockers.length > 0">
-                <td colspan="10" class="pa-0">
+                <td colspan="11" class="pa-0">
                   <div
                     :style="{
                       width: '100%',
@@ -542,6 +564,16 @@
                       <v-icon v-else style="color: green">mdi-check</v-icon>
                     </td>
                     <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ docker.Image }}</td>
+                    <td style="padding: 4px 8px; vertical-align: middle">
+                      <div class="d-flex align-center ga-1">
+                        <span v-if="docker.size_human" class="text-caption">
+                          {{ docker.size_human }}
+                        </span>
+                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">
+                          <v-icon size="16">mdi-calculator</v-icon>
+                        </v-btn>
+                      </div>
+                    </td>
                     <td>
                       <template v-if="docker.Ports && docker.Ports.some((p) => p.PublicPort)">
                         <div>
@@ -930,6 +962,7 @@ import { ref, onMounted, reactive, onUnmounted, computed, watch, nextTick } from
 import draggable from 'vuedraggable';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
 import { useI18n } from 'vue-i18n';
 import { useTheme } from 'vuetify';
 import { openTerminalPopup } from '@/composables/terminalpopup';
@@ -945,6 +978,7 @@ const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
 const { t } = useI18n();
 const theme = useTheme();
 const { overlay } = useOverlay();
+const { call } = useApi();
 const dockers = ref([]);
 const dockerGroups = ref([]);
 const mosDockers = ref([]);
@@ -1026,9 +1060,8 @@ const filteredUngroupedDockers = computed(() => {
 });
 
 onMounted(async () => {
-  await getDockers();
-  await getComposeStacks();
-  await getDockerGroups();
+  dockersLoading.value = true;
+  await Promise.all([getDockers(), getComposeStacks(), getDockerGroups()]);
   dockersLoading.value = false;
 });
 
@@ -1045,272 +1078,172 @@ const filteredGroupContainers = (group) => {
 };
 
 const getDockers = async () => {
-  try {
-    const [res, mosRes] = await Promise.all([
-      fetch('/api/v1/docker/containers/json?all=true', {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        },
-      }),
-      fetch('/api/v1/docker/mos/containers', {
-        headers: {
-          Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        },
-      }),
-    ]);
+  const [result, mosResult] = await Promise.all([
+    call('/api/v1/docker/containers/json?all=true', {
+      method: 'GET',
+      errorLabel: t('docker containers could not be loaded'),
+      showOverlay: false,
+    }),
+    call('/api/v1/docker/mos/containers', {
+      method: 'GET',
+      errorLabel: t('docker containers could not be loaded'),
+      showOverlay: false,
+    }),
+  ]);
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker containers could not be loaded')}|$| ${error.error || t('unknown error')}`);
+  if (!result || !mosResult) {
+    return;
+  }
+
+  result.forEach((docker) => {
+    if (docker.Names && Array.isArray(docker.Names)) {
+      docker.Names = docker.Names.map((name) => (name.startsWith('/') ? name.slice(1) : name));
     }
-    if (!mosRes.ok) {
-      const error = await mosRes.json();
-      throw new Error(`${t('docker containers could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
+    docker.showInfo = false;
+    docker.webui = '';
+  });
 
-    const result = await res.json();
-    const mosResult = await mosRes.json();
+  if (Array.isArray(mosResult)) {
+    result.sort((a, b) => {
+      const objA = mosResult.find((item) => item.name === a.Names[0]);
+      const objB = mosResult.find((item) => item.name === b.Names[0]);
+      const idxA = objA ? objA.index : Number.MAX_SAFE_INTEGER;
+      const idxB = objB ? objB.index : Number.MAX_SAFE_INTEGER;
 
-    result.forEach((docker) => {
-      if (docker.Names && Array.isArray(docker.Names)) {
-        docker.Names = docker.Names.map((name) => (name.startsWith('/') ? name.slice(1) : name));
-      }
-      docker.showInfo = false;
-      docker.webui = '';
+      return idxA - idxB;
     });
+  }
 
-    if (Array.isArray(mosResult)) {
-      result.sort((a, b) => {
-        const objA = mosResult.find((item) => item.name === a.Names[0]);
-        const objB = mosResult.find((item) => item.name === b.Names[0]);
-        const idxA = objA ? objA.index : Number.MAX_SAFE_INTEGER;
-        const idxB = objB ? objB.index : Number.MAX_SAFE_INTEGER;
+  result.forEach((docker) => {
+    const mos = mosResult.find((item) => item.name === docker.Names[0]);
+    docker.autostart = mos ? mos.autostart : false;
+    docker.wait = mos ? mos.wait : 0;
+    docker.index = mos ? mos.index : Number.MAX_SAFE_INTEGER;
+    docker.default_shell = mos ? mos.default_shell : '/bin/sh';
 
-        return idxA - idxB;
-      });
-    }
-
-    result.forEach((docker) => {
-      const mos = mosResult.find((item) => item.name === docker.Names[0]);
-      docker.autostart = mos ? mos.autostart : false;
-      docker.wait = mos ? mos.wait : 0;
-      docker.index = mos ? mos.index : Number.MAX_SAFE_INTEGER;
-      docker.default_shell = mos ? mos.default_shell : '/bin/sh';
-
-      if (docker.NetworkSettings && docker.NetworkSettings.Networks) {
-        const networkMode = docker.HostConfig?.NetworkMode || '';
-        const networkSettings = docker.NetworkSettings.Networks[networkMode];
-        if (networkSettings && networkSettings.IPAMConfig) {
-          // Prefer IPv4, fallback to IPv6
-          if (networkSettings.IPAMConfig.IPv4Address) {
-            docker.custom_ip = networkSettings.IPAMConfig.IPv4Address;
-          } else if (networkSettings.IPAMConfig.IPv6Address) {
-            // IPv6 addresses need brackets in URLs
-            docker.custom_ip = `[${networkSettings.IPAMConfig.IPv6Address}]`;
-          } else {
-            docker.custom_ip = mos ? mos.custom_ip : '';
-          }
+    if (docker.NetworkSettings && docker.NetworkSettings.Networks) {
+      const networkMode = docker.HostConfig?.NetworkMode || '';
+      const networkSettings = docker.NetworkSettings.Networks[networkMode];
+      if (networkSettings && networkSettings.IPAMConfig) {
+        if (networkSettings.IPAMConfig.IPv4Address) {
+          docker.custom_ip = networkSettings.IPAMConfig.IPv4Address;
+        } else if (networkSettings.IPAMConfig.IPv6Address) {
+          docker.custom_ip = `[${networkSettings.IPAMConfig.IPv6Address}]`;
         } else {
           docker.custom_ip = mos ? mos.custom_ip : '';
         }
       } else {
         docker.custom_ip = mos ? mos.custom_ip : '';
       }
-    });
+    } else {
+      docker.custom_ip = mos ? mos.custom_ip : '';
+    }
+  });
 
-    dockers.value = result;
-    mosDockers.value = mosResult;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  dockers.value = result;
+  mosDockers.value = mosResult;
 };
 
 const getComposeStacks = async () => {
-  try {
-    const res = await fetch('/api/v1/docker/mos/compose/stacks', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('compose stacks could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-    const result = await res.json();
-    composeStacks.value = result || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  const result = await call('/api/v1/docker/mos/compose/stacks', {
+    method: 'GET',
+    errorLabel: t('compose stacks could not be loaded'),
+    showOverlay: false,
+  });
+  composeStacks.value = result || [];
 };
 
 const getDockerGroups = async () => {
-  try {
-    const res = await fetch('/api/v1/docker/mos/groups', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
+  const result = await call('/api/v1/docker/mos/groups', {
+    method: 'GET',
+    errorLabel: t('docker groups could not be loaded'),
+    showOverlay: false,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker groups could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-    const result = await res.json();
-    const newGroups = result || [];
-
-    dockerGroups.value = newGroups.map((group) => {
-      const old = dockerGroups.value.find((g) => g.id === group.id);
-      const composeStack = group.compose ? composeStacks.value.find((s) => s.name === group.name) : null;
-      const runningCount = (group.containers || []).filter((name) => {
-        const d = dockers.value.find((d) => d.Names && d.Names[0] === name);
-        return d && d.State === 'running';
-      }).length;
-      return {
-        ...group,
-        expanded: old ? old.expanded : false,
-        webui: composeStack?.webui || group.webui || null,
-        autostart: composeStack?.autostart ?? false,
-        runningCount,
-      };
-    });
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
+  if (!result) {
+    return;
   }
+
+  const newGroups = result || [];
+
+  dockerGroups.value = newGroups.map((group) => {
+    const old = dockerGroups.value.find((g) => g.id === group.id);
+    const composeStack = group.compose ? composeStacks.value.find((s) => s.name === group.name) : null;
+    const runningCount = (group.containers || []).filter((name) => {
+      const d = dockers.value.find((d) => d.Names && d.Names[0] === name);
+      return d && d.State === 'running';
+    }).length;
+    return {
+      ...group,
+      expanded: old ? old.expanded : false,
+      webui: composeStack?.webui || group.webui || null,
+      autostart: composeStack?.autostart ?? false,
+      runningCount,
+    };
+  });
 };
 
 const stopDocker = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/containers/${name}/stop`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker container stopped successfully'));
-    getDockers();
-    getDockerGroups();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/containers/${name}/stop`, {
+    method: 'POST',
+    errorLabel: t('docker container could not be stopped'),
+    successLabel: t('docker container stopped successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const startDocker = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/containers/${name}/start`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container could not be started')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker container started successfully'));
-    getDockers();
-    getDockerGroups();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/containers/${name}/start`, {
+    method: 'POST',
+    errorLabel: t('docker container could not be started'),
+    successLabel: t('docker container started successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const restartDocker = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/containers/${name}/restart`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: name }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container could not be restarted')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker container restarted successfully'));
-    getDockers();
-    getDockerGroups();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/containers/${name}/restart`, {
+    method: 'POST',
+    body: { name: name },
+    errorLabel: t('docker container could not be restarted'),
+    successLabel: t('docker container restarted successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const killDocker = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/containers/${name}/kill`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker container stopped successfully'));
-    getDockers();
-    getDockerGroups();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/containers/${name}/kill`, {
+    method: 'POST',
+    errorLabel: t('docker container could not be stopped'),
+    successLabel: t('docker container stopped successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const removeDocker = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/remove`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: name }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container could not be removed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('docker container removed successfully'));
-    getDockers();
-    getDockerGroups();
+  const result = await call(`/api/v1/docker/mos/remove`, {
+    method: 'DELETE',
+    body: { name: name },
+    errorLabel: t('docker container could not be removed'),
+    successLabel: t('docker container removed successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
     clearDeleteDialog();
     deleteDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -1329,120 +1262,53 @@ const updateAll = async () => {
 
 const switchAutostart = async (docker) => {
   const autostart = [{ name: docker.Names[0], autostart: docker.autostart }];
-
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/containers`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(autostart),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('autostart setting could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('autostart setting saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  await call(`/api/v1/docker/mos/containers`, {
+    method: 'POST',
+    body: autostart,
+    errorLabel: t('autostart setting could not be saved'),
+    successLabel: t('autostart setting saved successfully'),
+  });
 };
 
 const switchComposeAutostart = async (group) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(group.name)}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ autostart: group.autostart }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('autostart setting could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('autostart setting saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(group.name)}`, {
+    method: 'PATCH',
+    body: { autostart: group.autostart },
+    errorLabel: t('autostart setting could not be saved'),
+    successLabel: t('autostart setting saved successfully'),
+  });
 };
 
 const setGroupOrder = async () => {
-  const newOrder = JSON.stringify(
-    dockerGroups.value.map((group, idx) => {
-      const obj = {
-        id: group.id,
-        index: idx + 1,
-      };
-      return obj;
-    }),
-  );
+  const newOrder = dockerGroups.value.map((group, idx) => ({
+    id: group.id,
+    index: idx + 1,
+  }));
 
-  try {
-    const res = await fetch('/api/v1/docker/mos/groups/order', {
-      method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: newOrder,
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker group order could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker group order saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  await call('/api/v1/docker/mos/groups/order', {
+    method: 'PUT',
+    body: newOrder,
+    errorLabel: t('docker group order could not be saved'),
+    successLabel: t('docker group order saved successfully'),
+    showOverlay: false,
+  });
 };
 
 const onDragEnd = async () => {
-  const newOrder = JSON.stringify(
-    dockers.value.map((docker, idx) => {
-      const obj = {
-        name: docker.Names[0],
-        index: idx + 1,
-        wait: docker.wait,
-        autostart: docker.autostart,
-      };
-      return obj;
-    }),
-  );
+  const newOrder = dockers.value.map((docker, idx) => ({
+    name: docker.Names[0],
+    index: idx + 1,
+    wait: docker.wait,
+    autostart: docker.autostart,
+  }));
 
-  try {
-    const res = await fetch('/api/v1/docker/mos/containers', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: newOrder,
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker container order could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker container order saved successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  await call('/api/v1/docker/mos/containers', {
+    method: 'POST',
+    body: newOrder,
+    errorLabel: t('docker container order could not be saved'),
+    successLabel: t('docker container order saved successfully'),
+    showOverlay: false,
+  });
 };
 
 const checkWebui = (docker) => {
@@ -1490,26 +1356,13 @@ const openTerminalLogs = async (dockerName) => {
 };
 
 const createDockerTerminalSession = async (dockerName, shell) => {
-  try {
-    const res = await fetch('/api/v1/terminal/create', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ command: 'docker', args: ['exec', '-it', dockerName, shell], width: 900, height: 420 }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('failed to create terminal session')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const Result = await res.json();
-    return Result.sessionId;
-  } catch (e) {
-    showSnackbarError(e.message);
-  }
+  const result = await call('/api/v1/terminal/create', {
+    method: 'POST',
+    body: { command: 'docker', args: ['exec', '-it', dockerName, shell], width: 900, height: 420 },
+    errorLabel: t('failed to create terminal session'),
+    showOverlay: false,
+  });
+  return result?.sessionId || null;
 };
 
 const createLogsTerminalSession = async (dockerName) => {
@@ -1518,56 +1371,32 @@ const createLogsTerminalSession = async (dockerName) => {
     return existingSessionId;
   }
 
-  try {
-    const res = await fetch('/api/v1/terminal/create', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ command: 'docker', args: ['logs', '-f', '--tail', '100', dockerName], readonlyOnly: true, width: 900, height: 420 }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('failed to create terminal log session')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const Result = await res.json();
-    return Result.sessionId;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  const result = await call('/api/v1/terminal/create', {
+    method: 'POST',
+    body: { command: 'docker', args: ['logs', '-f', '--tail', '100', dockerName], readonlyOnly: true, width: 900, height: 420 },
+    errorLabel: t('failed to create terminal log session'),
+    showOverlay: false,
+  });
+  return result?.sessionId || null;
 };
 
 const checkExistingTerminal = async (command, arg, dockerName) => {
-  try {
-    const res = await fetch(`/api/v1/terminal/sessions`, {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
+  const result = await call(`/api/v1/terminal/sessions`, {
+    method: 'GET',
+    errorLabel: t('failed to retrieve terminal sessions'),
+    showOverlay: false,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('failed to retrieve terminal sessions')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const Result = await res.json();
-    const sessions = ref([]);
-    sessions.value = Result.sessions || [];
-    const session = sessions.value.filter((session) => session.command === command && Array.isArray(session.args) && session.args.includes(dockerName) && session.args.includes(arg));
-    if (session.length > 0) {
-      return session[0].sessionId;
-    } else {
-      return null;
-    }
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
+  if (!result) {
+    return null;
   }
+
+  const sessions = result.sessions || [];
+  const session = sessions.filter((session) => session.command === command && Array.isArray(session.args) && session.args.includes(dockerName) && session.args.includes(arg));
+  if (session.length > 0) {
+    return session[0].sessionId;
+  }
+  return null;
 };
 
 const createDockerGroup = async () => {
@@ -1586,30 +1415,15 @@ const createDockerGroup = async () => {
     containers: createGroupDialog.containers,
   };
 
-  try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/docker/mos/groups', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newGroup),
-    });
-    overlay.value = false;
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker group could not be created')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('docker group created successfully'));
-    getDockerGroups();
+  const result = await call('/api/v1/docker/mos/groups', {
+    method: 'POST',
+    body: newGroup,
+    errorLabel: t('docker group could not be created'),
+    successLabel: t('docker group created successfully'),
+  });
+  if (result) {
+    await getDockerGroups();
     clearCreateGroupDialog();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -1619,29 +1433,14 @@ const deleteDockerGroup = async () => {
     return;
   }
 
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/groups/${encodeURIComponent(deleteGroupDialog.group.id)}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker group could not be deleted')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('docker group deleted successfully'));
-    getDockerGroups();
+  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(deleteGroupDialog.group.id)}`, {
+    method: 'DELETE',
+    errorLabel: t('docker group could not be deleted'),
+    successLabel: t('docker group deleted successfully'),
+  });
+  if (result) {
+    await getDockerGroups();
     clearDeleteGroupDialog();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -1665,102 +1464,51 @@ const updateDockerGroup = async () => {
     containers: changeGroupDialog.containers,
   };
 
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/groups/${changeGroupDialog.group.id}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedGroup),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker group could not be updated')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('docker group updated successfully'));
-    getDockerGroups();
+  const result = await call(`/api/v1/docker/mos/groups/${changeGroupDialog.group.id}`, {
+    method: 'PUT',
+    body: updatedGroup,
+    errorLabel: t('docker group could not be updated'),
+    successLabel: t('docker group updated successfully'),
+  });
+  if (result) {
+    await getDockerGroups();
     clearChangeGroupDialog();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const startDockerGroupContainers = async (group) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/start`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('all containers in group could not be started')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('all containers in group started successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/start`, {
+    method: 'POST',
+    errorLabel: t('all containers in group could not be started'),
+    successLabel: t('all containers in group started successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const stopDockerGroupContainers = async (group) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/stop`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('all containers in group could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('all containers in group stopped successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/stop`, {
+    method: 'POST',
+    errorLabel: t('all containers in group could not be stopped'),
+    successLabel: t('all containers in group stopped successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const restartDockerGroupContainers = async (group) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/restart`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('all containers in group could not be restarted')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('all containers in group restarted successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/restart`, {
+    method: 'POST',
+    errorLabel: t('all containers in group could not be restarted'),
+    successLabel: t('all containers in group restarted successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
@@ -1770,103 +1518,48 @@ const updateDockerGroupContainers = async (group, force_update = false) => {
 };
 
 const getUnusedImages = async () => {
-  try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/docker/mos/unusedimages', {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('unused images could not be removed')}|$| ${error.error || t('unknown error')}`);
-    }
-    const result = await res.json();
-    unusedImages.value = result || [];
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  const result = await call('/api/v1/docker/mos/unusedimages', {
+    method: 'GET',
+    errorLabel: t('unused images could not be retrieved'),
+    showOverlay: false,
+  });
+  unusedImages.value = result || [];
 };
 
 const removeUnusedImage = async (imageId) => {
   const removeImageData = [imageId];
-
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/unusedimages`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(removeImageData),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('unused image could not be removed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('unused image removed successfully'));
+  const result = await call(`/api/v1/docker/mos/unusedimages`, {
+    method: 'DELETE',
+    body: removeImageData,
+    errorLabel: t('unused image could not be removed'),
+    successLabel: t('unused image removed successfully'),
+  });
+  if (result) {
     await getUnusedImages();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const startComposeStack = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/start`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker compose stack could not be started')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('docker compose stack started successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/start`, {
+    method: 'POST',
+    errorLabel: t('docker compose stack could not be started'),
+    successLabel: t('docker compose stack started successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
 const stopComposeStack = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/stop`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker compose stack could not be stopped')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('docker compose stack stopped successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/stop`, {
+    method: 'POST',
+    errorLabel: t('docker compose stack could not be stopped'),
+    successLabel: t('docker compose stack stopped successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
@@ -1876,26 +1569,14 @@ const removeComposeStack = async (name) => {
 };
 
 const restartComposeStack = async (name) => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/restart`, {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker compose stack could not be restarted')}|$| ${error.error || t('unknown error')}`);
-    }
-    getDockers();
-    getDockerGroups();
-    showSnackbarSuccess(t('docker compose stack restarted successfully'));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
+  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/restart`, {
+    method: 'POST',
+    errorLabel: t('docker compose stack could not be restarted'),
+    successLabel: t('docker compose stack restarted successfully'),
+  });
+  if (result) {
+    await getDockers();
+    await getDockerGroups();
   }
 };
 
@@ -1906,28 +1587,14 @@ const updateDockerWaitTimes = async () => {
     index: docker.index,
   }));
 
-  try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/docker/mos/containers', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(waitTimes),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('wait times could not be saved')}|$| ${error.error || t('unknown error')}`);
-    }
-    showSnackbarSuccess(t('wait times saved successfully'));
+  const result = await call('/api/v1/docker/mos/containers', {
+    method: 'POST',
+    body: waitTimes,
+    errorLabel: t('wait times could not be saved'),
+    successLabel: t('wait times saved successfully'),
+  });
+  if (result) {
     dockerWaitTimesDialog.value = false;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -1956,25 +1623,41 @@ const editComposeStack = async () => {
 };
 
 const getComposeStack = async (name) => {
+  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}`, {
+    method: 'GET',
+    errorLabel: t('docker compose stack could not be loaded'),
+    showOverlay: false,
+  });
+  return result || null;
+};
+
+const calculatingAllSizes = ref(false);
+
+const calculateAllContainerSizes = async () => {
   try {
-    const res = await fetch(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    calculatingAllSizes.value = true;
+    const result = await call('/api/v1/docker/mos/containers/calc', {
+      errorLabel: t('error calculating directory size'),
+      successLabel: t('directory size calculated'),
+      showOverlay: false,
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker compose stack could not be loaded')}|$| ${error.error || t('unknown error')}`);
+    if (Array.isArray(result)) {
+      result.forEach((item) => {
+        const docker = dockers.value.find((d) => d.Names && d.Names[0] === item.name);
+        if (docker) {
+          docker.size_human = item.size_human;
+        }
+      });
     }
-    const result = await res.json();
-    return result;
   } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-    return null;
+  } finally {
+    calculatingAllSizes.value = false;
   }
+};
+
+const calculateAllGroupSizes = async () => {
+  await calculateAllContainerSizes();
 };
 
 const getContainerNameFromNetworkmode = (networkMode) => {
