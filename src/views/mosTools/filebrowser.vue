@@ -1082,6 +1082,7 @@ const calculateDirectorySize = async (item) => {
       body: { path: item.path },
       errorLabel: t('error calculating directory size'),
       successLabel: t('directory size calculated'),
+      showOverlay: false,
     });
 
     if (data) {
