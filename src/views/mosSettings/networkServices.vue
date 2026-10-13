@@ -55,6 +55,10 @@
               </v-col>
             </v-row>
             <v-text-field class="mt-2" :label="$t('workgroup')" color="green" inset hide-details="auto" v-model="settingsNetwork.samba.workgroup"></v-text-field>
+            <v-btn v-if="settingsNetwork.samba.enabled" class="mt-3" color="secondary" variant="outlined" size="small" @click="openSambaConfigDialog">
+              <v-icon class="mr-2">mdi-file-cog</v-icon>
+              {{ $t('edit extra configuration') }}
+            </v-btn>
             <v-divider class="my-4"></v-divider>
             <span class="text-title-medium font-weight-medium">{{ $t('tailscale') }}</span>
             <v-chip size="small" v-if="settingsNetwork.tailscale.online" color="green">{{ $t('online') }}</v-chip>
@@ -223,6 +227,36 @@
     </v-card>
   </v-dialog>
 
+  <!-- Samba Config Dialog -->
+  <v-dialog v-model="sambaConfigDialog.visible" max-width="900" scrollable>
+    <v-card :title="$t('samba extra configuration')" prepend-icon="mdi-file-cog" class="d-flex flex-column pa-0" style="max-height: 80vh">
+      <v-card-text style="overflow: auto; flex: 1">
+        <div class="mb-4">
+          <span class="text-title-medium font-weight-medium">{{ $t('global configuration') }}</span>
+        </div>
+        <div ref="globalEditorContainer" class="editor-wrapper mb-6"></div>
+        <v-divider class="my-4" />
+        <div class="mb-4">
+          <span class="text-title-medium font-weight-medium">{{ $t('shares configuration') }}</span>
+        </div>
+        <div ref="sharesEditorContainer" class="editor-wrapper mb-6"></div>
+        <v-alert type="info" variant="tonal" density="compact" class="mb-4 text-caption">
+          {{ $t('samba config auto restart') }}
+        </v-alert>
+      </v-card-text>
+      <v-divider />
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" color="onPrimary" @click="sambaConfigDialog.visible = false">
+          {{ $t('cancel') }}
+        </v-btn>
+        <v-btn color="onPrimary" @click="saveSambaConfig">
+          {{ $t('save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <!-- Floating Action Button -->
   <v-fab @click="setNetworkSettings()" color="primary" style="position: fixed; bottom: 32px; right: 32px; z-index: 1000" size="large" icon>
     <v-icon>mdi-content-save</v-icon>
@@ -230,13 +264,19 @@
 </template>
 
 <script setup>
-import { onMounted, ref, reactive, computed } from 'vue';
-import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
+import { onMounted, ref, reactive, computed, watch, nextTick, onUnmounted } from 'vue';
+import { showSnackbarError } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
 import { openTerminalPopup } from '@/composables/terminalpopup';
-import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
+import { useTheme } from 'vuetify';
+import { EditorView, basicSetup } from 'codemirror';
+import { EditorState } from '@codemirror/state';
+import { oneDark } from '@codemirror/theme-one-dark';
 
 const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
+const { t } = useI18n();
+const { call } = useApi();
 const settingsNetwork = ref({
   ssh: {
     enabled: false,
@@ -287,9 +327,17 @@ const confirmLogout = reactive({
   value: false,
   service: '',
 });
+const sambaConfigDialog = reactive({
+  visible: false,
+  originalGlobal: '',
+  originalShares: '',
+});
+const globalEditorContainer = ref(null);
+const sharesEditorContainer = ref(null);
+let globalEditor = null;
+let sharesEditor = null;
 const apiSettingsNetwork = ref(null);
-const { t } = useI18n();
-const { overlay } = useOverlay();
+const theme = useTheme();
 
 onMounted(() => {
   getNetworkSettings();
@@ -297,67 +345,46 @@ onMounted(() => {
 
 const getNetworkSettings = async () => {
   try {
-    const res = await fetch('/api/v1/mos/settings/network/services', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
+    const apiData = await call('/api/v1/mos/settings/network/services', {
+      errorLabel: t('network settings could not be loaded'),
+      showOverlay: false,
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('network settings could not be loaded')}|$| ${error.error || t('unknown error')}`);
+    if (apiData) {
+      settingsNetwork.value = {
+        ssh: { ...settingsNetwork.value.ssh, ...(apiData.ssh || {}) },
+        samba: { ...settingsNetwork.value.samba, ...(apiData.samba || {}) },
+        samba_discovery: { ...settingsNetwork.value.samba_discovery, ...(apiData.samba_discovery || {}) },
+        nfs: { ...settingsNetwork.value.nfs, ...(apiData.nfs || {}) },
+        nut: { ...settingsNetwork.value.nut, ...(apiData.nut || {}) },
+        tailscale: {
+          ...settingsNetwork.value.tailscale,
+          ...(apiData.tailscale || {}),
+          web: { ...settingsNetwork.value.tailscale.web, ...(apiData.tailscale?.web || {}) },
+        },
+        netbird: { ...settingsNetwork.value.netbird, ...(apiData.netbird || {}) },
+        remote_mounting: { ...settingsNetwork.value.remote_mounting, ...(apiData.remote_mounting || {}) },
+        dnsmasq: { ...settingsNetwork.value.dnsmasq, ...(apiData.dnsmasq || {}) },
+        rsync_daemon: { ...settingsNetwork.value.rsync_daemon, ...(apiData.rsync_daemon || {}) },
+      };
+      apiSettingsNetwork.value = JSON.parse(JSON.stringify(settingsNetwork.value));
     }
-
-    const apiData = await res.json();
-    settingsNetwork.value = {
-      ssh: { ...settingsNetwork.value.ssh, ...(apiData.ssh || {}) },
-      samba: { ...settingsNetwork.value.samba, ...(apiData.samba || {}) },
-      samba_discovery: { ...settingsNetwork.value.samba_discovery, ...(apiData.samba_discovery || {}) },
-      nfs: { ...settingsNetwork.value.nfs, ...(apiData.nfs || {}) },
-      nut: { ...settingsNetwork.value.nut, ...(apiData.nut || {}) },
-      tailscale: {
-        ...settingsNetwork.value.tailscale,
-        ...(apiData.tailscale || {}),
-        web: { ...settingsNetwork.value.tailscale.web, ...(apiData.tailscale?.web || {}) },
-      },
-      netbird: { ...settingsNetwork.value.netbird, ...(apiData.netbird || {}) },
-      remote_mounting: { ...settingsNetwork.value.remote_mounting, ...(apiData.remote_mounting || {}) },
-      dnsmasq: { ...settingsNetwork.value.dnsmasq, ...(apiData.dnsmasq || {}) },
-      rsync_daemon: { ...settingsNetwork.value.rsync_daemon, ...(apiData.rsync_daemon || {}) },
-    };
-    apiSettingsNetwork.value = JSON.parse(JSON.stringify(settingsNetwork.value));
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  }
+  } catch {}
 };
 
 const setNetworkSettings = async () => {
   try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/mos/settings/network/services', {
+    await call('/api/v1/mos/settings/network/services', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(settingsNetwork.value),
+      body: settingsNetwork.value,
+      errorLabel: t('network settings could not be changed'),
+      successLabel: t('network settings changed successfully'),
+      showOverlay: true,
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('network settings could not be changed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('network settings changed successfully'));
     emit('refresh-drawer');
     getNetworkSettings();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
-  }
+  } catch {}
 };
 
 const openWebTerminal = async (service) => {
@@ -413,35 +440,157 @@ const createTerminalSession = async (service) => {
       height: 420,
     };
   } else {
-    showSnackbarError(t('unknown service'));
     return null;
   }
 
   try {
-    const res = await fetch('/api/v1/terminal/create', {
+    const result = await call('/api/v1/terminal/create', {
       method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: payload,
+      errorLabel: t('failed to create terminal session'),
+      showOverlay: false,
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('failed to create terminal session')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    const result = await res.json();
-    return result.sessionId;
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
+    return result?.sessionId || null;
+  } catch {
+    return null;
   }
 };
+
+const createEditor = (container, content) => {
+  if (!container) return null;
+
+  const isDark = theme.global.current.value.dark;
+  const extensions = [basicSetup, EditorView.lineWrapping];
+
+  if (isDark) {
+    extensions.push(oneDark);
+  }
+
+  const state = EditorState.create({
+    doc: content || '',
+    extensions,
+  });
+  const editor = new EditorView({
+    state,
+    parent: container,
+  });
+
+  return editor;
+};
+
+const destroyEditor = (editor) => {
+  if (editor) {
+    editor.destroy();
+  }
+};
+
+const openSambaConfigDialog = async () => {
+  try {
+    const data = await call('/api/v1/mos/settings/network/services/samba/config', {
+      errorLabel: t('failed to load samba config'),
+      showOverlay: false,
+    });
+
+    if (data) {
+      sambaConfigDialog.originalGlobal = data.global || '';
+      sambaConfigDialog.originalShares = data.shares || '';
+      sambaConfigDialog.visible = true;
+    }
+  } catch {}
+};
+
+const saveSambaConfig = async () => {
+  const currentGlobal = globalEditor?.state.doc.toString() || '';
+  const currentShares = sharesEditor?.state.doc.toString() || '';
+
+  try {
+    await call('/api/v1/mos/settings/network/services/samba/config', {
+      method: 'POST',
+      body: {
+        global: currentGlobal || null,
+        shares: currentShares || null,
+      },
+      errorLabel: t('failed to save samba config'),
+      successLabel: t('samba config saved successfully'),
+      showOverlay: true,
+    });
+
+    sambaConfigDialog.originalGlobal = currentGlobal;
+    sambaConfigDialog.originalShares = currentShares;
+    sambaConfigDialog.visible = false;
+  } catch {}
+};
+
+watch(
+  () => sambaConfigDialog.visible,
+  async (visible) => {
+    if (visible) {
+      await nextTick();
+      if (!globalEditor && globalEditorContainer.value) {
+        globalEditor = createEditor(globalEditorContainer.value, sambaConfigDialog.originalGlobal);
+      }
+      if (!sharesEditor && sharesEditorContainer.value) {
+        sharesEditor = createEditor(sharesEditorContainer.value, sambaConfigDialog.originalShares);
+      }
+    } else {
+      destroyEditor(globalEditor);
+      destroyEditor(sharesEditor);
+      globalEditor = null;
+      sharesEditor = null;
+    }
+  },
+);
+
+watch(
+  () => theme.global.current.value.dark,
+  () => {
+    if (sambaConfigDialog.visible) {
+      destroyEditor(globalEditor);
+      destroyEditor(sharesEditor);
+      globalEditor = null;
+      sharesEditor = null;
+
+      nextTick(() => {
+        if (globalEditorContainer.value) {
+          globalEditor = createEditor(globalEditorContainer.value, globalEditor?.state.doc.toString() || sambaConfigDialog.originalGlobal);
+        }
+        if (sharesEditorContainer.value) {
+          sharesEditor = createEditor(sharesEditorContainer.value, sharesEditor?.state.doc.toString() || sambaConfigDialog.originalShares);
+        }
+      });
+    }
+  },
+);
+
+onUnmounted(() => {
+  destroyEditor(globalEditor);
+  destroyEditor(sharesEditor);
+});
 </script>
 
 <style scoped>
+.editor-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
+  overflow: auto;
+  background: rgb(var(--v-theme-surface));
+}
+
+.editor-wrapper :deep(.cm-editor) {
+  height: 100%;
+  overflow: auto !important;
+}
+
+.editor-wrapper :deep(.cm-scroller) {
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .tailscale-web-row {
   gap: 0;
 }
