@@ -181,12 +181,9 @@
                     <td>&nbsp;</td>
                     <td style="padding: 4px 8px; vertical-align: middle">
                       <div class="d-flex align-center ga-1" style="overflow: hidden">
-                        <span v-if="group.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+                        <span v-if="group.size_human && !group.compose" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ group.size_human }}
                         </span>
-                        <v-btn v-if="!group.compose" variant="text" icon size="x-small" @click.stop="calculateGroupSizes(group)" :title="$t('calculate directory size')" color="primary">
-                          <v-icon size="16">mdi-calculator</v-icon>
-                        </v-btn>
                       </div>
                     </td>
                     <td>&nbsp;</td>
@@ -348,7 +345,7 @@
                         >
                           {{ dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human }}
                         </span>
-                        <v-btn v-if="!group.compose" variant="text" icon size="x-small" @click.stop="calculateContainerSize(containerName)" :title="$t('calculate directory size')" color="primary">
+                        <v-btn variant="text" icon size="x-small" @click.stop="calculateContainerSize(containerName)" :title="$t('calculate directory size')" color="primary">
                           <v-icon size="16">mdi-calculator</v-icon>
                         </v-btn>
                       </div>
@@ -1649,14 +1646,6 @@ const calculateContainerSize = async (containerName) => {
       if (docker) {
         docker.size_human = result.size_human;
       }
-    }
-  } catch (e) {}
-};
-
-const calculateGroupSizes = async (group) => {
-  try {
-    for (const containerName of group.containers || []) {
-      await calculateContainerSize(containerName);
     }
   } catch (e) {}
 };
