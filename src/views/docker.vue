@@ -13,19 +13,19 @@
         <v-skeleton-loader v-if="dockersLoading" type="card" :width="'100%'" :height="'60px'" class="mb-2" />
         <v-card v-else fluid style="margin-bottom: 80px" class="pa-0">
           <v-card-text class="pa-0">
-            <v-table class="bg-transparent">
+            <v-table class="bg-transparent" style="table-layout: fixed; width: 100%">
               <thead>
                 <tr style="cursor: pointer; background-color: rgba(0, 0, 0, 0.04)">
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle"></th>
-                  <th style="min-width: 250px; padding: 4px 8px; vertical-align: middle">{{ $t('name') }}</th>
+                  <th style="width: 350px; padding: 4px 8px; vertical-align: middle">{{ $t('name') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle">{{ $t('state') }}</th>
-                  <th style="min-width: 150px; padding: 4px 8px; vertical-align: middle">
+                  <th style="width: 150px; padding: 4px 8px; vertical-align: middle">
                     {{ $t('image') }}
                   </th>
                   <th style="width: 200px; padding: 4px 8px; vertical-align: middle">{{ $t('size') }}</th>
                   <th style="width: 250px; padding: 4px 8px; vertical-align: middle">{{ $t('ports') }}</th>
-                  <th style="padding: 4px 8px; vertical-align: middle">{{ $t('ip address') }}</th>
-                  <th style="padding: 4px 8px; vertical-align: middle">{{ $t('network') }}</th>
+                  <th style="width: 120px; padding: 4px 8px; vertical-align: middle">{{ $t('ip address') }}</th>
+                  <th style="width: 120px; padding: 4px 8px; vertical-align: middle">{{ $t('network') }}</th>
                   <th style="width: 90px; padding: 4px 8px; vertical-align: middle">{{ $t('autostart') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle">{{ $t('info') }}</th>
                   <th style="width: 42px; padding: 4px 8px; vertical-align: middle"></th>
@@ -184,7 +184,7 @@
                         <span v-if="group.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ group.size_human }}
                         </span>
-                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllGroupSizes(group)" :title="$t('calculate directory size')" color="primary">
+                        <v-btn v-if="!group.compose" variant="text" icon size="x-small" @click.stop="calculateGroupSizes(group)" :title="$t('calculate directory size')" color="primary">
                           <v-icon size="16">mdi-calculator</v-icon>
                         </v-btn>
                       </div>
@@ -341,10 +341,14 @@
 
                     <td style="padding: 4px 8px; vertical-align: middle">
                       <div class="d-flex align-center ga-1" style="overflow: hidden">
-                        <span v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+                        <span
+                          v-if="dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human"
+                          class="text-caption"
+                          style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                        >
                           {{ dockers.find((d) => d.Names && d.Names[0] === containerName)?.size_human }}
                         </span>
-                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">
+                        <v-btn v-if="!group.compose" variant="text" icon size="x-small" @click.stop="calculateContainerSize(containerName)" :title="$t('calculate directory size')" color="primary">
                           <v-icon size="16">mdi-calculator</v-icon>
                         </v-btn>
                       </div>
@@ -569,7 +573,7 @@
                         <span v-if="docker.size_human" class="text-caption" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                           {{ docker.size_human }}
                         </span>
-                        <v-btn variant="text" icon size="x-small" :loading="calculatingAllSizes" @click.stop="calculateAllContainerSizes()" :title="$t('calculate directory size')" color="primary">
+                        <v-btn variant="text" icon size="x-small" @click.stop="calculateContainerSize(docker.Names[0])" :title="$t('calculate directory size')" color="primary">
                           <v-icon size="16">mdi-calculator</v-icon>
                         </v-btn>
                       </div>
@@ -1631,33 +1635,30 @@ const getComposeStack = async (name) => {
   return result || null;
 };
 
-const calculatingAllSizes = ref(false);
-
-const calculateAllContainerSizes = async () => {
+const calculateContainerSize = async (containerName) => {
   try {
-    calculatingAllSizes.value = true;
-    const result = await call('/api/v1/docker/mos/containers/calc', {
+    const result = await call(`/api/v1/docker/mos/containers/${containerName}/calc`, {
+      method: 'GET',
       errorLabel: t('error calculating directory size'),
       successLabel: t('directory size calculated'),
       showOverlay: false,
     });
 
-    if (Array.isArray(result)) {
-      result.forEach((item) => {
-        const docker = dockers.value.find((d) => d.Names && d.Names[0] === item.name);
-        if (docker) {
-          docker.size_human = item.size_human;
-        }
-      });
+    if (result && result.size_human) {
+      const docker = dockers.value.find((d) => d.Names && d.Names[0] === containerName);
+      if (docker) {
+        docker.size_human = result.size_human;
+      }
     }
-  } catch (e) {
-  } finally {
-    calculatingAllSizes.value = false;
-  }
+  } catch (e) {}
 };
 
-const calculateAllGroupSizes = async () => {
-  await calculateAllContainerSizes();
+const calculateGroupSizes = async (group) => {
+  try {
+    for (const containerName of group.containers || []) {
+      await calculateContainerSize(containerName);
+    }
+  } catch (e) {}
 };
 
 const getContainerNameFromNetworkmode = (networkMode) => {
