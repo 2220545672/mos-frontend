@@ -1234,18 +1234,18 @@ const killDocker = async (name) => {
 };
 
 const removeDocker = async (name) => {
-  const result = await call(`/api/v1/docker/mos/remove`, {
-    method: 'DELETE',
-    body: { name: name },
-    errorLabel: t('docker container could not be removed'),
-    successLabel: t('docker container removed successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/remove`, {
+      method: 'DELETE',
+      body: { name: name },
+      errorLabel: t('docker container could not be removed'),
+      successLabel: t('docker container removed successfully'),
+    });
     await getDockers();
     await getDockerGroups();
     clearDeleteDialog();
     deleteDialog.value = false;
-  }
+  } catch (e) {}
 };
 
 const updateDocker = async (name, force_update = false) => {
@@ -1416,16 +1416,16 @@ const createDockerGroup = async () => {
     containers: createGroupDialog.containers,
   };
 
-  const result = await call('/api/v1/docker/mos/groups', {
-    method: 'POST',
-    body: newGroup,
-    errorLabel: t('docker group could not be created'),
-    successLabel: t('docker group created successfully'),
-  });
-  if (result) {
+  try {
+    await call('/api/v1/docker/mos/groups', {
+      method: 'POST',
+      body: newGroup,
+      errorLabel: t('docker group could not be created'),
+      successLabel: t('docker group created successfully'),
+    });
     await getDockerGroups();
     clearCreateGroupDialog();
-  }
+  } catch (e) {}
 };
 
 const deleteDockerGroup = async () => {
@@ -1434,15 +1434,15 @@ const deleteDockerGroup = async () => {
     return;
   }
 
-  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(deleteGroupDialog.group.id)}`, {
-    method: 'DELETE',
-    errorLabel: t('docker group could not be deleted'),
-    successLabel: t('docker group deleted successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/groups/${encodeURIComponent(deleteGroupDialog.group.id)}`, {
+      method: 'DELETE',
+      errorLabel: t('docker group could not be deleted'),
+      successLabel: t('docker group deleted successfully'),
+    });
     await getDockerGroups();
     clearDeleteGroupDialog();
-  }
+  } catch (e) {}
 };
 
 const updateDockerGroup = async () => {
@@ -1465,52 +1465,52 @@ const updateDockerGroup = async () => {
     containers: changeGroupDialog.containers,
   };
 
-  const result = await call(`/api/v1/docker/mos/groups/${changeGroupDialog.group.id}`, {
-    method: 'PUT',
-    body: updatedGroup,
-    errorLabel: t('docker group could not be updated'),
-    successLabel: t('docker group updated successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/groups/${changeGroupDialog.group.id}`, {
+      method: 'PUT',
+      body: updatedGroup,
+      errorLabel: t('docker group could not be updated'),
+      successLabel: t('docker group updated successfully'),
+    });
     await getDockerGroups();
     clearChangeGroupDialog();
-  }
+  } catch (e) {}
 };
 
 const startDockerGroupContainers = async (group) => {
-  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/start`, {
-    method: 'POST',
-    errorLabel: t('all containers in group could not be started'),
-    successLabel: t('all containers in group started successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/start`, {
+      method: 'POST',
+      errorLabel: t('all containers in group could not be started'),
+      successLabel: t('all containers in group started successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const stopDockerGroupContainers = async (group) => {
-  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/stop`, {
-    method: 'POST',
-    errorLabel: t('all containers in group could not be stopped'),
-    successLabel: t('all containers in group stopped successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/stop`, {
+      method: 'POST',
+      errorLabel: t('all containers in group could not be stopped'),
+      successLabel: t('all containers in group stopped successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const restartDockerGroupContainers = async (group) => {
-  const result = await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/restart`, {
-    method: 'POST',
-    errorLabel: t('all containers in group could not be restarted'),
-    successLabel: t('all containers in group restarted successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/groups/${encodeURIComponent(group.id)}/restart`, {
+      method: 'POST',
+      errorLabel: t('all containers in group could not be restarted'),
+      successLabel: t('all containers in group restarted successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const updateDockerGroupContainers = async (group, force_update = false) => {
@@ -1529,39 +1529,39 @@ const getUnusedImages = async () => {
 
 const removeUnusedImage = async (imageId) => {
   const removeImageData = [imageId];
-  const result = await call(`/api/v1/docker/mos/unusedimages`, {
-    method: 'DELETE',
-    body: removeImageData,
-    errorLabel: t('unused image could not be removed'),
-    successLabel: t('unused image removed successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/unusedimages`, {
+      method: 'DELETE',
+      body: removeImageData,
+      errorLabel: t('unused image could not be removed'),
+      successLabel: t('unused image removed successfully'),
+    });
     await getUnusedImages();
-  }
+  } catch (e) {}
 };
 
 const startComposeStack = async (name) => {
-  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/start`, {
-    method: 'POST',
-    errorLabel: t('docker compose stack could not be started'),
-    successLabel: t('docker compose stack started successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/start`, {
+      method: 'POST',
+      errorLabel: t('docker compose stack could not be started'),
+      successLabel: t('docker compose stack started successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const stopComposeStack = async (name) => {
-  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/stop`, {
-    method: 'POST',
-    errorLabel: t('docker compose stack could not be stopped'),
-    successLabel: t('docker compose stack stopped successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/stop`, {
+      method: 'POST',
+      errorLabel: t('docker compose stack could not be stopped'),
+      successLabel: t('docker compose stack stopped successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const removeComposeStack = async (name) => {
@@ -1570,15 +1570,15 @@ const removeComposeStack = async (name) => {
 };
 
 const restartComposeStack = async (name) => {
-  const result = await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/restart`, {
-    method: 'POST',
-    errorLabel: t('docker compose stack could not be restarted'),
-    successLabel: t('docker compose stack restarted successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/mos/compose/stacks/${encodeURIComponent(name)}/restart`, {
+      method: 'POST',
+      errorLabel: t('docker compose stack could not be restarted'),
+      successLabel: t('docker compose stack restarted successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const updateDockerWaitTimes = async () => {
@@ -1588,15 +1588,15 @@ const updateDockerWaitTimes = async () => {
     index: docker.index,
   }));
 
-  const result = await call('/api/v1/docker/mos/containers', {
-    method: 'POST',
-    body: waitTimes,
-    errorLabel: t('wait times could not be saved'),
-    successLabel: t('wait times saved successfully'),
-  });
-  if (result) {
+  try {
+    await call('/api/v1/docker/mos/containers', {
+      method: 'POST',
+      body: waitTimes,
+      errorLabel: t('wait times could not be saved'),
+      successLabel: t('wait times saved successfully'),
+    });
     dockerWaitTimesDialog.value = false;
-  }
+  } catch (e) {}
 };
 
 const sortDockerIndex = () => {

@@ -294,6 +294,9 @@ const setDarkMode = async (targetTheme) => {
       theme.change(result.darkmode ? 'dark' : 'light');
       darkMode.value = theme.global.name.value;
       theme.themes.value[theme.global.name.value].colors.primary = result.primary_color || '#1976D2';
+    } else {
+      theme.change(targetTheme);
+      darkMode.value = targetTheme;
     }
   } catch {}
 };
