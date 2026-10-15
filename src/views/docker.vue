@@ -1185,52 +1185,52 @@ const getDockerGroups = async () => {
 };
 
 const stopDocker = async (name) => {
-  const result = await call(`/api/v1/docker/containers/${name}/stop`, {
-    method: 'POST',
-    errorLabel: t('docker container could not be stopped'),
-    successLabel: t('docker container stopped successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/containers/${name}/stop`, {
+      method: 'POST',
+      errorLabel: t('docker container could not be stopped'),
+      successLabel: t('docker container stopped successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const startDocker = async (name) => {
-  const result = await call(`/api/v1/docker/containers/${name}/start`, {
-    method: 'POST',
-    errorLabel: t('docker container could not be started'),
-    successLabel: t('docker container started successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/containers/${name}/start`, {
+      method: 'POST',
+      errorLabel: t('docker container could not be started'),
+      successLabel: t('docker container started successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const restartDocker = async (name) => {
-  const result = await call(`/api/v1/docker/containers/${name}/restart`, {
-    method: 'POST',
-    body: { name: name },
-    errorLabel: t('docker container could not be restarted'),
-    successLabel: t('docker container restarted successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/containers/${name}/restart`, {
+      method: 'POST',
+      body: { name: name },
+      errorLabel: t('docker container could not be restarted'),
+      successLabel: t('docker container restarted successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const killDocker = async (name) => {
-  const result = await call(`/api/v1/docker/containers/${name}/kill`, {
-    method: 'POST',
-    errorLabel: t('docker container could not be stopped'),
-    successLabel: t('docker container stopped successfully'),
-  });
-  if (result) {
+  try {
+    await call(`/api/v1/docker/containers/${name}/kill`, {
+      method: 'POST',
+      errorLabel: t('docker container could not be stopped'),
+      successLabel: t('docker container stopped successfully'),
+    });
     await getDockers();
     await getDockerGroups();
-  }
+  } catch (e) {}
 };
 
 const removeDocker = async (name) => {
