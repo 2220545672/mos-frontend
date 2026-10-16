@@ -97,7 +97,17 @@
               <v-row>
                 <v-col cols="12" class="d-flex align-center justify-space-between">
                   <span class="text-title-medium font-weight-medium">{{ $t('docker networks') }}</span>
-                  <v-btn variant="text" size="small" color="green" class="ma-1 pa-0" style="min-width: 0; color: green" @click="openCreateNetworkDialog()" title="Add network" aria-label="add network">
+                  <v-btn
+                    :disabled="!settingsDocker.enabled"
+                    variant="text"
+                    size="small"
+                    color="green"
+                    class="ma-1 pa-0"
+                    style="min-width: 0; color: green"
+                    @click="openCreateNetworkDialog()"
+                    title="Add network"
+                    aria-label="add network"
+                  >
                     <v-icon size="18" class="mr-1">mdi-plus</v-icon>
                     {{ $t('add') }}
                   </v-btn>
@@ -213,7 +223,7 @@
 import { onMounted, ref, reactive, watch } from 'vue';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useI18n } from 'vue-i18n';
-import { useOverlay } from '@/composables/useOverlay';
+import { useApi } from '@/composables/useApi';
 import fsNavigatorDialog from '@/components/fsNavigatorDialog.vue';
 import CronScheduleDialog from '@/components/cronScheduleDialog.vue';
 
@@ -258,13 +268,12 @@ const createNetworkDialog = reactive({
     Driver: 'bridge',
   },
 });
-const { overlay } = useOverlay();
 const { t } = useI18n();
+const { call } = useApi();
 const emit = defineEmits(['refresh-drawer', 'refresh-notifications-badge']);
 
 onMounted(() => {
   getDockerService();
-  getDockerNetworks();
 });
 
 const openFsDialog = (cb) => {
@@ -306,47 +315,38 @@ watch(
 );
 
 const getDockerService = async () => {
-  try {
-    const res = await fetch('/api/v1/mos/settings/docker', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
+  const result = await call('/api/v1/mos/settings/docker', {
+    method: 'GET',
+    errorLabel: t('docker service could not be loaded'),
+    showOverlay: false,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker service could not be loaded')}|$| ${error.error || t('unknown error')}`);
+  if (result) {
+    settingsDocker.value = result;
+
+    if (settingsDocker.value.enabled) {
+      await getDockerNetworks();
+    } else {
+      dockerNetworks.value = [];
+      dockerNetworksLoading.value = false;
     }
-
-    settingsDocker.value = await res.json();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    dockerServiceLoading.value = false;
   }
+
+  dockerServiceLoading.value = false;
 };
 
 const getDockerNetworks = async () => {
-  try {
-    const res = await fetch('/api/v1/docker/networks', {
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
+  const result = await call('/api/v1/docker/networks', {
+    method: 'GET',
+    errorLabel: t('docker networks could not be loaded'),
+    showOverlay: false,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker networks could not be loaded')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    dockerNetworks.value = await res.json();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    dockerNetworksLoading.value = false;
+  if (result) {
+    dockerNetworks.value = result;
   }
+
+  dockerNetworksLoading.value = false;
 };
 
 const deleteDockerNetwork = async (network) => {
@@ -355,29 +355,17 @@ const deleteDockerNetwork = async (network) => {
 };
 
 const confirmDeleteNetwork = async () => {
-  try {
-    overlay.value = true;
-    const res = await fetch(`/api/v1/docker/networks/${deleteNetworkDialog.network.Id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-      },
-    });
+  const result = await call(`/api/v1/docker/networks/${deleteNetworkDialog.network.Id}`, {
+    method: 'DELETE',
+    errorLabel: t('docker network could not be deleted'),
+    successLabel: `${t('docker network')} "${deleteNetworkDialog.network.Name}" ${t('deleted successfully')}`,
+    showOverlay: true,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker network could not be deleted')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(`${t('docker network')} "${deleteNetworkDialog.network.Name}" ${t('deleted successfully')}`);
+  if (result) {
     deleteNetworkDialog.value = false;
     deleteNetworkDialog.network = null;
     getDockerNetworks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
@@ -393,60 +381,35 @@ const createDockerNetwork = async () => {
     return;
   }
 
-  try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/docker/networks/create', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        Name: createNetworkDialog.form.Name,
-        Driver: createNetworkDialog.form.Driver,
-      }),
-    });
+  const result = await call('/api/v1/docker/networks/create', {
+    method: 'POST',
+    body: {
+      Name: createNetworkDialog.form.Name,
+      Driver: createNetworkDialog.form.Driver,
+    },
+    errorLabel: t('docker network could not be created'),
+    successLabel: `${t('docker network')} "${createNetworkDialog.form.Name}" ${t('created successfully')}`,
+    showOverlay: true,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker network could not be created')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(`${t('docker network')} "${createNetworkDialog.form.Name}" ${t('created successfully')}`);
+  if (result) {
     createNetworkDialog.value = false;
     getDockerNetworks();
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 
 const setDockerService = async () => {
-  try {
-    overlay.value = true;
-    const res = await fetch('/api/v1/mos/settings/docker', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + localStorage.getItem('authToken'),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(settingsDocker.value),
-    });
+  const result = await call('/api/v1/mos/settings/docker', {
+    method: 'POST',
+    body: settingsDocker.value,
+    errorLabel: t('docker service could not be changed'),
+    successLabel: t('docker service changed successfully'),
+    showOverlay: true,
+  });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(`${t('docker service could not be changed')}|$| ${error.error || t('unknown error')}`);
-    }
-
-    showSnackbarSuccess(t('docker service changed successfully'));
+  if (result) {
+    getDockerService();
     emit('refresh-drawer');
-  } catch (e) {
-    const [userMessage, apiErrorMessage] = e.message.split('|$|');
-    showSnackbarError(userMessage, apiErrorMessage);
-  } finally {
-    overlay.value = false;
   }
 };
 </script>

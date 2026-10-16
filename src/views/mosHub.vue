@@ -150,90 +150,89 @@
             <v-container fluid class="pa-4" v-if="!hubLoading">
               <template v-if="mosHub.length > 0">
                 <div class="hub-grid">
-                  <v-card v-for="(tpl, i) in mosHub" :key="tpl.name || i" style="height: 250px; display: flex; flex-direction: column" class="pa-0">
-                    <v-card-text class="pa-0 pt-4" style="position: relative">
-                      <div class="d-flex justify-center align-center" style="height: 60px; width: 60px; margin: 0 auto; overflow: hidden">
-                        <v-img v-if="tpl.icon" :src="tpl.icon" contain style="max-width: 100%; max-height: 100%; width: auto; height: auto"></v-img>
-                        <v-icon v-else size="48" color="grey" style="opacity: 0.5">mdi-package-variant</v-icon>
-                      </div>
-                      <v-chip
-                        v-if="tpl.maintainer"
-                        size="small"
-                        class="position-absolute"
-                        style="top: 12px; left: 12px; background: var(--v-theme-secondary); color: var(--v-theme-on-secondary); z-index: 1"
-                        :href="tpl.maintainer_donate"
-                        target="_blank"
-                        prepend-icon="mdi-account"
-                      >
-                        {{ tpl.maintainer || $t('unknown') }}
-                      </v-chip>
-                      <v-chip v-if="tpl.type" size="small" class="position-absolute" style="top: 12px; right: 12px; background: var(--v-theme-primary); color: var(--v-theme-on-primary); z-index: 1">
-                        {{ $t(tpl.type) }}
-                      </v-chip>
-                    </v-card-text>
-                    <v-card-text class="py-2 px-4" style="min-height: 96px">
-                      <div class="font-weight-bold mb-1" style="line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1.1rem">
-                        {{ tpl.name || $t('unknown') }}
-                      </div>
-                      <div
-                        style="
-                          max-height: 3.6em;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                          display: -webkit-box;
-                          line-clamp: 2;
-                          -webkit-line-clamp: 2;
-                          -webkit-box-orient: vertical;
-                          white-space: normal;
-                          font-size: 0.9rem;
-                        "
-                      >
-                        {{ tpl.description }}
-                      </div>
-                    </v-card-text>
-                    <v-spacer />
-                    <v-divider />
-                    <v-card-actions style="flex: 0 0 auto; gap: 4px; padding: 8px">
-                      <v-chip v-if="tpl.installed" color="secondary" size="small">
-                        {{ $t('installed') }}
-                      </v-chip>
-                      <v-spacer />
-                      <v-btn color="secondary" :href="tpl.website" target="_blank" v-if="tpl.website" prepend-icon="mdi-web" size="small">
-                        {{ $t('webpage') }}
-                      </v-btn>
-                      <v-btn
-                        v-if="tpl.type == 'docker' && mosServices && mosServices.docker"
-                        color="secondary"
-                        prepend-icon="mdi-docker"
-                        size="small"
-                        @click="
-                          installDialog.tpl = tpl;
-                          installDialog.type = 'docker';
-                          installDialog.value = true;
-                        "
-                        :disabled="!mosServices.docker.running"
-                      >
-                        {{ tpl.installed ? $t('reinstall') : $t('install') }}
-                      </v-btn>
-                      <v-btn
-                        v-else-if="tpl.type == 'compose' && mosServices && mosServices.docker"
-                        color="secondary"
-                        prepend-icon="mdi-toy-brick-plus"
-                        size="small"
-                        @click="
-                          installDialog.tpl = tpl;
-                          installDialog.type = 'compose';
-                          installDialog.value = true;
-                        "
-                        :disabled="!mosServices.docker.running"
-                      >
-                        {{ $t('install') }}
-                      </v-btn>
-                      <v-btn v-else-if="tpl.type == 'plugin'" color="secondary" prepend-icon="mdi-puzzle" size="small" @click="openPluginInstallDialog(tpl)">
-                        {{ $t('install') }}
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
+<v-card v-for="(tpl, i) in mosHub" :key="tpl.name || i" style="height: 240px; display: flex; flex-direction: column" class="pa-0">
+  <v-card-text class="pa-0" style="position: relative; flex: 0 0 auto; padding-top: 40px !important">
+    <v-chip
+      v-if="tpl.maintainer"
+      size="small"
+      class="position-absolute"
+      style="top: 12px; left: 12px; background: var(--v-theme-secondary); color: var(--v-theme-on-secondary); z-index: 1"
+      :href="tpl.maintainer_donate"
+      target="_blank"
+      prepend-icon="mdi-account"
+    >
+      {{ tpl.maintainer || $t('unknown') }}
+    </v-chip>
+    <div class="d-flex justify-center align-center" style="height: 64px; width: 60px; margin: 0 auto; overflow: hidden">
+      <v-img v-if="tpl.icon" :src="tpl.icon" contain style="max-width: 100%; max-height: 100%; width: auto; height: auto"></v-img>
+      <v-icon v-else size="48" color="grey" style="opacity: 0.5">mdi-package-variant</v-icon>
+    </div>
+    <v-chip v-if="tpl.type" size="small" class="position-absolute" style="top: 12px; right: 12px; background: var(--v-theme-primary); color: var(--v-theme-on-primary); z-index: 1">
+      {{ $t(tpl.type) }}
+    </v-chip>
+  </v-card-text>
+  <v-card-text class="py-2 px-4" style="flex: 1 1 auto; min-height: 0">
+    <div class="font-weight-bold mb-1" style="line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1.1rem">
+      {{ tpl.name || $t('unknown') }}
+    </div>
+    <div
+      style="
+        max-height: 3.6em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        line-clamp: 2;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        font-size: 0.9rem;
+      "
+    >
+      {{ tpl.description }}
+    </div>
+  </v-card-text>
+  <v-divider />
+  <v-card-actions style="flex: 0 0 auto; gap: 4px; padding: 0 8px; display: flex; align-items: center; height: 44px; min-height: 44px">
+    <v-chip v-if="tpl.installed" color="secondary" size="small">
+      {{ $t('installed') }}
+    </v-chip>
+    <v-spacer />
+    <v-btn color="secondary" :href="tpl.website" target="_blank" v-if="tpl.website" prepend-icon="mdi-web" size="small">
+      {{ $t('webpage') }}
+    </v-btn>
+    <v-btn
+      v-if="tpl.type == 'docker' && mosServices && mosServices.docker"
+      color="secondary"
+      prepend-icon="mdi-docker"
+      size="small"
+      @click="
+        installDialog.tpl = tpl;
+        installDialog.type = 'docker';
+        installDialog.value = true;
+      "
+      :disabled="!mosServices.docker.running"
+    >
+      {{ tpl.installed ? $t('reinstall') : $t('install') }}
+    </v-btn>
+    <v-btn
+      v-else-if="tpl.type == 'compose' && mosServices && mosServices.docker"
+      color="secondary"
+      prepend-icon="mdi-toy-brick-plus"
+      size="small"
+      @click="
+        installDialog.tpl = tpl;
+        installDialog.type = 'compose';
+        installDialog.value = true;
+      "
+      :disabled="!mosServices.docker.running"
+    >
+      {{ $t('install') }}
+    </v-btn>
+    <v-btn v-else-if="tpl.type == 'plugin'" color="secondary" prepend-icon="mdi-puzzle" size="small" @click="openPluginInstallDialog(tpl)">
+      {{ $t('install') }}
+    </v-btn>
+  </v-card-actions>
+</v-card>
                 </div>
 
                 <!-- Pagination -->
