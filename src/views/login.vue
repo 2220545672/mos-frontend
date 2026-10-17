@@ -111,10 +111,16 @@ const login = async () => {
     localStorage.setItem('hideInactiveMenus', result.user.hide_inactive_menus ? 'true' : 'false');
     localStorage.setItem('groupMenus', result.user.group_menus ? 'true' : 'false');
 
-    if(result.user.darkmode) {
-      theme.change('dark');
+    let themeSetting = result.user.darkmode;
+    if (typeof themeSetting === 'boolean') {
+      themeSetting = themeSetting ? 'dark' : 'light';
+    }
+
+    if (themeSetting === null) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme.change(prefersDark ? 'dark' : 'light');
     } else {
-      theme.change('light');
+      theme.change(themeSetting);
     }
     locale.value = result.user.language || 'en';
     theme.themes.value[theme.global.name.value].colors.primary = result.user.primary_color || '#1976D2';

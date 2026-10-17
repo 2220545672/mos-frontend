@@ -319,11 +319,16 @@ const getUserProfile = async () => {
 
     const result = await res.json();
 
-    if (result.darkmode === null) {
+    let themeSetting = result.darkmode;
+    if (typeof themeSetting === 'boolean') {
+      themeSetting = themeSetting ? 'dark' : 'light';
+    }
+
+    if (themeSetting === null) {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       theme.change(prefersDark ? 'dark' : 'light');
     } else {
-      theme.change(result.darkmode);
+      theme.change(themeSetting);
     }
     locale.value = result.language || 'en';
     theme.themes.value[theme.global.name.value].colors.primary = result.primary_color || '#1976D2';

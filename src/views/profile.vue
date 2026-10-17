@@ -9,19 +9,13 @@
       </v-container>
       <v-container fluid class="pa-0">
         <v-card class="px-0" style="margin-bottom: 80px">
-          <v-card-text class="pt-2">
-            <div class="mb-4">
-              <label class="text-caption d-block mb-2">{{ $t('dark mode') }}</label>
-              <v-btn-toggle v-model="darkMode" @update:modelValue="setDarkMode($event)" mandatory color="green" density="compact" divided>
-                <v-btn :value="null" :title="$t('auto mode')">
-                  <v-icon>mdi-palette-advanced</v-icon>
-                </v-btn>
-                <v-btn value="light" :title="$t('light mode')">
-                  <v-icon>mdi-white-balance-sunny</v-icon>
-                </v-btn>
-                <v-btn value="dark" :title="$t('dark mode')">
-                  <v-icon>mdi-moon-waning-crescent</v-icon>
-                </v-btn>
+          <v-card-text class="pt-4">
+            <div class="d-flex align-center gap-3 mb-4">
+              <span class="text-title-medium font-weight-medium flex-shrink-0 mr-4">{{ $t('theme') }}</span>
+              <v-btn-toggle v-model="darkMode" @update:modelValue="setDarkMode($event)" mandatory color="green" density="compact" divided variant="outlined">
+                <v-btn :value="null">{{ $t('auto mode') }}</v-btn>
+                <v-btn value="light">{{ $t('light mode') }}</v-btn>
+                <v-btn value="dark">{{ $t('dark mode') }}</v-btn>
               </v-btn-toggle>
             </div>
             <v-select
@@ -233,7 +227,12 @@ const getUser = async () => {
       showOverlay: false,
     });
     selectedByteFormat.value = result.byte_format || 'binary';
-    darkMode.value = result.darkmode;
+    // Handle darkmode: convert boolean (old format) to string (new format)
+    if (typeof result.darkmode === 'boolean') {
+      darkMode.value = result.darkmode ? 'dark' : 'light';
+    } else {
+      darkMode.value = result.darkmode;
+    }
     hideInactiveMenus.value = result.hide_inactive_menus;
     groupMenus.value = result.group_menus;
     mfaEnabled.value = result.mfa_enabled;
@@ -305,7 +304,7 @@ const setDarkMode = async (targetTheme) => {
     });
     if (result) {
       darkMode.value = result.darkmode;
-      
+
       if (result.darkmode === null) {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         theme.change(prefersDark ? 'dark' : 'light');
