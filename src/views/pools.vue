@@ -2098,8 +2098,8 @@ const openMergerfsSettingsDialog = async (pool) => {
     create: policies.create ? policies.create : 'pfrd',
     search: policies.search ? policies.search : 'ff',
   }));
-  mergerfsSettingsDialog.snapraid_sync = JSON.parse(JSON.stringify(pool.config.snapraid
-    ? pool.config.snapraid
+  mergerfsSettingsDialog.snapraid_sync = JSON.parse(JSON.stringify(pool.config.sync
+    ? pool.config.sync
     : {
         enabled: false,
         schedule: '30 0 * * *',
@@ -2736,7 +2736,7 @@ const saveMergerfsSettings = async () => {
     await call(`/api/v1/pools/${mergerfsSettingsDialog.pool.id}/config`, {
       method: 'PATCH',
       body: {
-        snapraid: mergerfsSettingsDialog.snapraid_sync,
+        sync: mergerfsSettingsDialog.snapraid_sync,
         policies: mergerfsSettingsDialog.mergerfs_policies,
         usage_alert: mergerfsSettingsDialog.usage_alert,
       },
