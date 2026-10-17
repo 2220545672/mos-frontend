@@ -1849,5 +1849,6 @@
   "compose stacks could not be loaded": "Compose Stacks konnten nicht geladen werden",
   "parity devices": "Paritätsgeräte",
   "spindown (min)": "Spindown (Min.)",
-  "inherit": "Erben"
+  "inherit": "Erben",
+  "no devices": "Keine Geräte"
 }
