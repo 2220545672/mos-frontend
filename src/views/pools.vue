@@ -2076,30 +2076,29 @@ const openPoolSettingsDialog = async (pool) => {
   }
 };
 const openBtrfsSettingsDialog = (pool) => {
-  btrfsSettingsDialog.value = true;
   btrfsSettingsDialog.pool = pool;
-  btrfsSettingsDialog.scrub = pool.config.scrub || {
+  btrfsSettingsDialog.scrub = JSON.parse(JSON.stringify(pool.config.scrub || {
     enabled: false,
     schedule: '0 4 * * WED',
-  };
-  btrfsSettingsDialog.balance = pool.config.balance || {
+  }));
+  btrfsSettingsDialog.balance = JSON.parse(JSON.stringify(pool.config.balance || {
     enabled: false,
     schedule: '0 5 * * SUN',
-  };
-  btrfsSettingsDialog.usage_alert = {
+  }));
+  btrfsSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  };
+  }));
+  btrfsSettingsDialog.value = true;
 };
 const openMergerfsSettingsDialog = async (pool) => {
-  mergerfsSettingsDialog.value = true;
   mergerfsSettingsDialog.pool = pool;
   const policies = await getMergerfsPolicies(pool.id);
-  mergerfsSettingsDialog.mergerfs_policies = {
+  mergerfsSettingsDialog.mergerfs_policies = JSON.parse(JSON.stringify({
     create: policies.create ? policies.create : 'pfrd',
     search: policies.search ? policies.search : 'ff',
-  };
-  mergerfsSettingsDialog.snapraid_sync = pool.config.snapraid
+  }));
+  mergerfsSettingsDialog.snapraid_sync = JSON.parse(JSON.stringify(pool.config.snapraid
     ? pool.config.snapraid
     : {
         enabled: false,
@@ -2112,23 +2111,24 @@ const openMergerfsSettingsDialog = async (pool) => {
           enabled: false,
           schedule: '0 4 * * WED',
         },
-      };
-  mergerfsSettingsDialog.usage_alert = {
+      }));
+  mergerfsSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  };
+  }));
+  mergerfsSettingsDialog.value = true;
 };
 const openNonraidSettingsDialog = (pool) => {
-  nonraidSettingsDialog.value = true;
   nonraidSettingsDialog.pool = pool;
-  nonraidSettingsDialog.check = pool.config.check || {
+  nonraidSettingsDialog.check = JSON.parse(JSON.stringify(pool.config.check || {
     enabled: false,
     schedule: '0 5 * * SUN',
-  };
-  nonraidSettingsDialog.usage_alert = {
+  }));
+  nonraidSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  };
+  }));
+  nonraidSettingsDialog.value = true;
 };
 const openCreateVPoolDialog = () => {
   createVpoolDialog.value = true;
