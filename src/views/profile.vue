@@ -10,7 +10,20 @@
       <v-container fluid class="pa-0">
         <v-card class="px-0" style="margin-bottom: 80px">
           <v-card-text class="pt-2">
-            <v-switch v-model="darkMode" :label="$t('dark mode')" :true-value="'dark'" :false-value="'light'" @update:modelValue="setDarkMode($event)" inset density="compact" color="green" />
+            <div class="mb-4">
+              <label class="text-caption d-block mb-2">{{ $t('dark mode') }}</label>
+              <v-btn-toggle v-model="darkMode" @update:modelValue="setDarkMode($event)" mandatory color="green" density="compact" divided>
+                <v-btn :value="null" :title="$t('auto mode')">
+                  <v-icon>mdi-palette-advanced</v-icon>
+                </v-btn>
+                <v-btn value="light" :title="$t('light mode')">
+                  <v-icon>mdi-white-balance-sunny</v-icon>
+                </v-btn>
+                <v-btn value="dark" :title="$t('dark mode')">
+                  <v-icon>mdi-moon-waning-crescent</v-icon>
+                </v-btn>
+              </v-btn-toggle>
+            </div>
             <v-select
               v-model="selectedLanguage"
               :items="languages"
@@ -182,7 +195,7 @@ const selectedByteFormat = ref('');
 const expiryDays = ref(1);
 const theme = useTheme();
 const color = ref(theme.themes.value[theme.global.name.value].colors.primary || '#1976D2');
-const darkMode = ref(false);
+const darkMode = ref(null);
 const hideInactiveMenus = ref(false);
 const groupMenus = ref(false);
 const mfaDialog = reactive({
@@ -220,7 +233,7 @@ const getUser = async () => {
       showOverlay: false,
     });
     selectedByteFormat.value = result.byte_format || 'binary';
-    darkMode.value = result.darkmode ? 'dark' : 'light';
+    darkMode.value = result.darkmode;
     hideInactiveMenus.value = result.hide_inactive_menus;
     groupMenus.value = result.group_menus;
     mfaEnabled.value = result.mfa_enabled;
@@ -287,16 +300,19 @@ const setDarkMode = async (targetTheme) => {
   try {
     const result = await call(`/api/v1/auth/users/${localStorage.getItem('userid')}`, {
       method: 'PUT',
-      body: { darkmode: targetTheme === 'dark' ? true : false },
+      body: { darkmode: targetTheme },
       errorLabel: t('dark mode could not be changed'),
     });
     if (result) {
-      theme.change(result.darkmode ? 'dark' : 'light');
-      darkMode.value = theme.global.name.value;
+      darkMode.value = result.darkmode;
+      
+      if (result.darkmode === null) {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        theme.change(prefersDark ? 'dark' : 'light');
+      } else {
+        theme.change(result.darkmode);
+      }
       theme.themes.value[theme.global.name.value].colors.primary = result.primary_color || '#1976D2';
-    } else {
-      theme.change(targetTheme);
-      darkMode.value = targetTheme;
     }
   } catch {}
 };

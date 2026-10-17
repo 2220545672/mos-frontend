@@ -319,10 +319,11 @@ const getUserProfile = async () => {
 
     const result = await res.json();
 
-    if (result.darkmode) {
-      theme.change('dark');
+    if (result.darkmode === null) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme.change(prefersDark ? 'dark' : 'light');
     } else {
-      theme.change('light');
+      theme.change(result.darkmode);
     }
     locale.value = result.language || 'en';
     theme.themes.value[theme.global.name.value].colors.primary = result.primary_color || '#1976D2';
