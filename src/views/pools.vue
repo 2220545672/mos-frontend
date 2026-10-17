@@ -1392,7 +1392,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
@@ -1437,7 +1437,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
@@ -1571,7 +1571,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
@@ -1616,7 +1616,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
@@ -1711,7 +1711,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
@@ -1756,7 +1756,7 @@
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :placeholder="$t('inherit')"
+                  :placeholder="$t('spindown (min)')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
