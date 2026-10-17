@@ -141,7 +141,7 @@
                   <v-progress-linear
                     :model-value="pool.status.usagePercent"
                     height="8"
-                    :color="getUsageColor(pool.status.usagePercent)"
+                    :color="getUsageColor(pool.status.usagePercent, pool)"
                     rounded
                     bg-opacity="0.25"
                     class="flex-grow-1"
@@ -222,7 +222,7 @@
                           <v-progress-linear
                             :model-value="data_device.storage.usagePercent"
                             height="6"
-                            :color="getUsageColor(data_device.storage.usagePercent)"
+                            :color="getUsageColor(data_device.storage.usagePercent, pool)"
                             rounded
                             class="flex-grow-1"
                             style="min-width: 40px"
@@ -290,7 +290,7 @@
                         </td>
                         <td class="pa-1" style="vertical-align: bottom">
                           <div v-if="parity_device.storage">
-                            <v-progress-linear :model-value="parity_device.storage.usagePercent" height="6" color="grey darken-1" rounded class="flex-grow-1" style="min-width: 40px" />
+                            <v-progress-linear :model-value="parity_device.storage.usagePercent" height="6" :color="getUsageColor(parity_device.storage.usagePercent, pool)" rounded class="flex-grow-1" style="min-width: 40px" />
                             <div class="d-flex justify-space-between align-center" style="white-space: nowrap; font-size: 0.8rem !important">
                               <span class="text-caption text-medium-emphasis" style="white-space: nowrap; font-size: 0.8rem !important">{{ Math.round(parity_device.storage.usagePercent) }}%</span>
                               <span v-if="parity_device.storage.usagePercent != null">{{ parity_device.storage.usedSpace_human }} / {{ parity_device.storage.totalSpace_human }}</span>
@@ -374,7 +374,7 @@
                       <v-progress-linear
                         :model-value="vpool.status.usagePercent"
                         height="8"
-                        :color="getUsageColor(vpool.status.usagePercent)"
+                        color="green"
                         rounded
                         bg-opacity="0.25"
                         class="flex-grow-1"
@@ -1321,7 +1321,7 @@
           <v-col cols="4">
             <div class="d-flex align-center">
               <v-switch v-model="btrfsSettingsDialog.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('scrub enabled') }}</span>
+              <span class="text-body-2">{{ $t('scrub') }}</span>
             </div>
           </v-col>
           <v-col cols="8" v-if="btrfsSettingsDialog.scrub.enabled">
@@ -1339,7 +1339,7 @@
           <v-col cols="4">
             <div class="d-flex align-center">
               <v-switch v-model="btrfsSettingsDialog.balance.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('balance enabled') }}</span>
+              <span class="text-body-2">{{ $t('balance') }}</span>
             </div>
           </v-col>
           <v-col cols="8" v-if="btrfsSettingsDialog.balance.enabled">
@@ -1357,12 +1357,100 @@
         <span class="text-title-medium font-weight-medium">{{ $t('usage alerts') }}</span>
         <v-row class="mt-4">
           <v-col cols="12" md="6">
-            <v-text-field v-model="btrfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" />
+            <v-text-field v-model="btrfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" hide-details="auto"/>
           </v-col>
           <v-col cols="12" md="6">
             <v-text-field v-model="btrfsSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
           </v-col>
         </v-row>
+        <v-divider class="mt-6 mb-4"></v-divider>
+        <span class="text-title-medium font-weight-medium">{{ $t('spindown') }}</span>
+        <div v-if="btrfsSettingsDialog.pool && btrfsSettingsDialog.pool.data_devices.length > 0" class="mt-4">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.data_devices, btrfsSettingsDialog.spindown.data_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('btrfs-data', btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.data_devices, btrfsSettingsDialog.spindown.data_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!btrfsSettingsDialog.spindown.data_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in btrfsSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(btrfsSettingsDialog.spindown.data_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
+        <div v-if="btrfsSettingsDialog.pool && btrfsSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.parity_devices, btrfsSettingsDialog.spindown.parity_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('btrfs-parity', btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.parity_devices, btrfsSettingsDialog.spindown.parity_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!btrfsSettingsDialog.spindown.parity_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in btrfsSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(btrfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -1450,6 +1538,94 @@
             <v-text-field v-model="mergerfsSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
           </v-col>
         </v-row>
+        <v-divider class="mt-6 mb-4"></v-divider>
+        <span class="text-title-medium font-weight-medium">{{ $t('spindown') }}</span>
+        <div v-if="mergerfsSettingsDialog.pool && mergerfsSettingsDialog.pool.data_devices.length > 0" class="mt-4">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.data_devices, mergerfsSettingsDialog.spindown.data_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('mergerfs-data', mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.data_devices, mergerfsSettingsDialog.spindown.data_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!mergerfsSettingsDialog.spindown.data_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in mergerfsSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.data_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
+        <div v-if="mergerfsSettingsDialog.pool && mergerfsSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.parity_devices, mergerfsSettingsDialog.spindown.parity_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('mergerfs-parity', mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.parity_devices, mergerfsSettingsDialog.spindown.parity_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!mergerfsSettingsDialog.spindown.parity_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in mergerfsSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -1496,6 +1672,96 @@
             <v-text-field v-model="nonraidSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
           </v-col>
         </v-row>
+
+        <v-divider class="mt-6 mb-4"></v-divider>
+
+        <span class="text-title-medium font-weight-medium">{{ $t('spindown') }}</span>
+        <div v-if="nonraidSettingsDialog.pool && nonraidSettingsDialog.pool.data_devices.length > 0" class="mt-4">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.data_devices, nonraidSettingsDialog.spindown.data_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('nonraid-data', nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.data_devices, nonraidSettingsDialog.spindown.data_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!nonraidSettingsDialog.spindown.data_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in nonraidSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(nonraidSettingsDialog.spindown.data_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
+        <div v-if="nonraidSettingsDialog.pool && nonraidSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
+            <v-btn 
+              v-if="getAvailableSpindownDevices(nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.parity_devices, nonraidSettingsDialog.spindown.parity_devices).length > 0"
+              variant="text" 
+              size="small" 
+              color="success" 
+              prepend-icon="mdi-plus"
+              @click="openAddSpindownDeviceDialog('nonraid-parity', nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.parity_devices, nonraidSettingsDialog.spindown.parity_devices)"
+            >
+              {{ $t('add') }}
+            </v-btn>
+          </div>
+          <v-sheet v-if="!nonraidSettingsDialog.spindown.parity_devices.length" border rounded class="pa-4 text-center text-medium-emphasis mb-2">
+            {{ $t('no devices') }}
+          </v-sheet>
+          <v-sheet v-for="(spindownDevice, idx) in nonraidSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
+            <v-row align="center">
+              <v-col cols="10">
+                <v-text-field
+                  v-model.number="spindownDevice.value"
+                  type="number"
+                  density="compact"
+                  :label="spindownDevice.device"
+                  :placeholder="$t('inherit')"
+                  hide-details
+                  variant="outlined"
+                  @blur="ensureSpindownNull(spindownDevice)"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-end">
+                <v-btn 
+                  icon="mdi-delete-outline" 
+                  variant="text" 
+                  color="error" 
+                  size="small"
+                  @click="removeSpindownDevice(nonraidSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
+                />
+              </v-col>
+            </v-row>
+          </v-sheet>
+        </div>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -1536,6 +1802,28 @@
       <v-card-actions style="flex-shrink: 0">
         <v-btn @click="createVpoolDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
         <v-btn @click="createVPool()" color="onPrimary">{{ $t('create') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Add Spindown Device Dialog -->
+  <v-dialog v-model="addSpindownDeviceDialog.value" max-width="400">
+    <v-card>
+      <v-card-title>{{ $t('add') }} {{ $t('device') }}</v-card-title>
+      <v-card-text>
+        <v-select
+          v-model="addSpindownDeviceDialog.selectedDevice"
+          :items="addSpindownDeviceDialog.availableDevices"
+          item-title="device"
+          item-value="slot"
+          :label="$t('device')"
+        />
+      </v-card-text>
+      <v-divider />
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn @click="addSpindownDeviceDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
+        <v-btn @click="confirmAddSpindownDevice()" color="primary">{{ $t('add') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -1758,6 +2046,10 @@ const btrfsSettingsDialog = reactive({
     warning: 85,
     alert: 90,
   },
+  spindown: {
+    data_devices: [],
+    parity_devices: [],
+  },
 });
 const snapraidOperationDialog = reactive({
   value: false,
@@ -1804,6 +2096,10 @@ const mergerfsSettingsDialog = reactive({
     warning: 85,
     alert: 90,
   },
+  spindown: {
+    data_devices: [],
+    parity_devices: [],
+  },
 });
 const nonraidSettingsDialog = reactive({
   value: false,
@@ -1815,6 +2111,10 @@ const nonraidSettingsDialog = reactive({
   usage_alert: {
     warning: 85,
     alert: 90,
+  },
+  spindown: {
+    data_devices: [],
+    parity_devices: [],
   },
 });
 const createVpoolDialog = reactive({
@@ -1836,6 +2136,12 @@ const createVpoolDialog = reactive({
 const vpoolFsDialog = reactive({
   value: false,
   initialPath: '/',
+});
+const addSpindownDeviceDialog = reactive({
+  value: false,
+  dialogType: null,
+  selectedDevice: null,
+  availableDevices: [],
 });
 
 onMounted(async () => {
@@ -1935,6 +2241,90 @@ const performSpinAction = (action) => {
     }
     spinDialog.value = false;
   }
+};
+const removeSpindownDevice = (devices, slot) => {
+  if (!devices || !Array.isArray(devices)) return;
+  const index = devices.findIndex(d => d.slot === slot);
+  if (index > -1) {
+    devices.splice(index, 1);
+  }
+};
+const cleanSpindownConfig = (spindown) => {
+  const normalizeValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const num = Number(value);
+    return isNaN(num) ? null : num;
+  };
+  
+  return {
+    data_devices: (spindown.data_devices || [])
+      .map(d => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
+    parity_devices: (spindown.parity_devices || [])
+      .map(d => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
+  };
+};
+const ensureSpindownNull = (device) => {
+  if (device.value === '' || device.value === undefined) {
+    device.value = null;
+  }
+};
+const getAvailableSpindownDevices = (pool, deviceArray, configArray) => {
+  if (!pool || !deviceArray || !configArray) return [];
+  return deviceArray.filter(device => !configArray.find(d => d.slot === device.slot));
+};
+const addSpindownDevice = (pool, deviceArray, configArray, selectedSlot) => {
+  const device = deviceArray.find(d => d.slot === selectedSlot);
+  if (device && !configArray.find(d => d.slot === device.slot)) {
+    configArray.push({ slot: device.slot, device: device.device, value: null });
+  }
+};
+const openAddSpindownDeviceDialog = (dialogType, pool, deviceArray, configArray) => {
+  addSpindownDeviceDialog.dialogType = dialogType;
+  addSpindownDeviceDialog.availableDevices = getAvailableSpindownDevices(pool, deviceArray, configArray);
+  addSpindownDeviceDialog.selectedDevice = addSpindownDeviceDialog.availableDevices.length > 0 ? addSpindownDeviceDialog.availableDevices[0].slot : null;
+  addSpindownDeviceDialog.value = true;
+};
+const confirmAddSpindownDevice = () => {
+  if (!addSpindownDeviceDialog.selectedDevice || !addSpindownDeviceDialog.dialogType) return;
+  
+  const dialogType = addSpindownDeviceDialog.dialogType;
+  const selectedSlot = addSpindownDeviceDialog.selectedDevice;
+  
+  if (dialogType === 'btrfs-data') {
+    const device = btrfsSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
+    if (device && !btrfsSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+      btrfsSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  } else if (dialogType === 'btrfs-parity') {
+    const device = btrfsSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
+    if (device && !btrfsSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+      btrfsSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  } else if (dialogType === 'mergerfs-data') {
+    const device = mergerfsSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
+    if (device && !mergerfsSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+      mergerfsSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  } else if (dialogType === 'mergerfs-parity') {
+    const device = mergerfsSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
+    if (device && !mergerfsSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+      mergerfsSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  } else if (dialogType === 'nonraid-data') {
+    const device = nonraidSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
+    if (device && !nonraidSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+      nonraidSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  } else if (dialogType === 'nonraid-parity') {
+    const device = nonraidSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
+    if (device && !nonraidSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+      nonraidSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
+    }
+  }
+  
+  addSpindownDeviceDialog.value = false;
 };
 const openManageMergerfsDevicesDialog = (pool) => {
   manageMergerfsDevicesDialog.value = true;
@@ -2089,6 +2479,15 @@ const openBtrfsSettingsDialog = (pool) => {
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
   }));
+  
+  const spindownConfig = pool.config.spindown || {
+    data_devices: [],
+    parity_devices: [],
+  };
+  
+  btrfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
+  btrfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
+  
   btrfsSettingsDialog.value = true;
 };
 const openMergerfsSettingsDialog = async (pool) => {
@@ -2116,6 +2515,15 @@ const openMergerfsSettingsDialog = async (pool) => {
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
   }));
+  
+  const spindownConfig = pool.config.spindown || {
+    data_devices: [],
+    parity_devices: [],
+  };
+  
+  mergerfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
+  mergerfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
+  
   mergerfsSettingsDialog.value = true;
 };
 const openNonraidSettingsDialog = (pool) => {
@@ -2128,6 +2536,15 @@ const openNonraidSettingsDialog = (pool) => {
     warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
     alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
   }));
+  
+  const spindownConfig = pool.config.spindown || {
+    data_devices: [],
+    parity_devices: [],
+  };
+  
+  nonraidSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
+  nonraidSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
+  
   nonraidSettingsDialog.value = true;
 };
 const openCreateVPoolDialog = () => {
@@ -2722,6 +3139,7 @@ const saveBtrfsSettings = async () => {
         scrub: btrfsSettingsDialog.scrub,
         balance: btrfsSettingsDialog.balance,
         usage_alert: btrfsSettingsDialog.usage_alert,
+        spindown: cleanSpindownConfig(btrfsSettingsDialog.spindown),
       },
       errorLabel: t('btrfs settings could not be saved'),
       successLabel: t('btrfs settings saved successfully'),
@@ -2739,6 +3157,7 @@ const saveMergerfsSettings = async () => {
         sync: mergerfsSettingsDialog.snapraid_sync,
         policies: mergerfsSettingsDialog.mergerfs_policies,
         usage_alert: mergerfsSettingsDialog.usage_alert,
+        spindown: cleanSpindownConfig(mergerfsSettingsDialog.spindown),
       },
       errorLabel: t('mergerfs settings could not be saved'),
       successLabel: t('mergerfs settings saved successfully'),
@@ -2755,6 +3174,7 @@ const saveNonraidSettings = async () => {
       body: {
         check: nonraidSettingsDialog.check,
         usage_alert: nonraidSettingsDialog.usage_alert,
+        spindown: cleanSpindownConfig(nonraidSettingsDialog.spindown),
       },
       errorLabel: t('nonraid settings could not be saved'),
       successLabel: t('nonraid settings saved successfully'),
@@ -2995,10 +3415,18 @@ const switchPoolType = async () => {
   }
 };
 
-const getUsageColor = (usagePercent) => {
-  if (usagePercent < 70) {
+const getUsageColor = (usagePercent, pool) => {
+  let warningThreshold = 75;
+  let alertThreshold = 90;
+  
+  if (pool.config && pool.config.usage_alert) {
+    warningThreshold = pool.config.usage_alert.warning ?? 75;
+    alertThreshold = pool.config.usage_alert.alert ?? 90;
+  }
+  
+  if (usagePercent < warningThreshold) {
     return 'green';
-  } else if (usagePercent < 90) {
+  } else if (usagePercent < alertThreshold) {
     return 'orange';
   } else {
     return 'red';

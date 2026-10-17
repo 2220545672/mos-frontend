@@ -1683,5 +1683,8 @@
   "please configure nut in mos settings": "Veuillez configurer NUT dans les paramètres MOS",
   "input frequency": "Fréquence d'entrée",
   "output voltage": "Tension de sortie",
-  "select path": "Sélectionner un chemin"
+  "select path": "Sélectionner un chemin",
+  "parity devices": "Dispositifs de parité",
+  "spindown (min)": "Spindown (min)",
+  "inherit": "Hériter"
 }

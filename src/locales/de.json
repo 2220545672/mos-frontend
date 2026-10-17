@@ -1846,5 +1846,8 @@
   "bookmarks could not be saved": "Lesezeichen konnten nicht gespeichert werden",
   "set backup label on new device": "Backup Label auf neuem Gerät setzen",
   "new device gets label mos_backup": "Neues Gerät erhält das Label MOS_BACKUP",
-  "compose stacks could not be loaded": "Compose Stacks konnten nicht geladen werden"
+  "compose stacks could not be loaded": "Compose Stacks konnten nicht geladen werden",
+  "parity devices": "Paritätsgeräte",
+  "spindown (min)": "Spindown (Min.)",
+  "inherit": "Erben"
 }

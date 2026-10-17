@@ -1846,5 +1846,8 @@
   "bookmarks could not be saved": "Bookmarks could not be saved",
   "set backup label on new device": "Set backup label on new device",
   "new device gets label mos_backup": "New device gets label MOS_BACKUP",
-  "compose stacks could not be loaded": "Compose Stacks could not be loaded"
+  "compose stacks could not be loaded": "Compose Stacks could not be loaded",
+  "parity devices": "Parity devices",
+  "spindown (min)": "Spindown (min)",
+  "inherit": "Inherit"
 }

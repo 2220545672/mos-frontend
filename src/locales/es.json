@@ -1775,5 +1775,8 @@
   "high load": "Carga alta",
   "moderate load": "Carga moderada",
   "low load": "Carga baja",
-  "body": "Cuerpo"
+  "body": "Cuerpo",
+  "parity devices": "Dispositivos de paridad",
+  "spindown (min)": "Spindown (min)",
+  "inherit": "Heredar"
 }
