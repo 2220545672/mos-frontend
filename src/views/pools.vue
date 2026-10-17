@@ -1387,7 +1387,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
@@ -1432,7 +1432,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
@@ -1566,7 +1566,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
@@ -1611,7 +1611,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
@@ -1706,7 +1706,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
@@ -1751,7 +1751,7 @@
               <v-col class="flex-grow-0 pr-2">
                 <span class="text-body-2">{{ spindownDevice.device }}</span>
               </v-col>
-              <v-col class="flex-grow-0" style="width: 110px">
+              <v-col class="flex-grow-0 pl-2" style="min-width: 120px">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
