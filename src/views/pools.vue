@@ -1383,20 +1383,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in btrfsSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
@@ -1426,20 +1428,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in btrfsSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
@@ -1558,20 +1562,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in mergerfsSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
@@ -1601,20 +1607,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in mergerfsSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
@@ -1694,20 +1702,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in nonraidSettingsDialog.spindown.data_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
@@ -1737,20 +1747,22 @@
             {{ $t('no devices') }}
           </v-sheet>
           <v-sheet v-for="(spindownDevice, idx) in nonraidSettingsDialog.spindown.parity_devices" :key="idx" border rounded class="pa-3 mb-2">
-            <v-row align="center">
-              <v-col cols="10">
+            <v-row align="center" no-gutters>
+              <v-col class="flex-grow-0 pr-2">
+                <span class="text-body-2">{{ spindownDevice.device }}</span>
+              </v-col>
+              <v-col class="flex-grow-1">
                 <v-text-field
                   v-model.number="spindownDevice.value"
                   type="number"
                   density="compact"
-                  :label="spindownDevice.device"
                   :placeholder="$t('inherit')"
                   hide-details
                   variant="outlined"
                   @blur="ensureSpindownNull(spindownDevice)"
                 />
               </v-col>
-              <v-col cols="2" class="d-flex justify-end">
+              <v-col class="flex-grow-0 pl-2 d-flex justify-end">
                 <v-btn 
                   icon="mdi-delete-outline" 
                   variant="text" 
