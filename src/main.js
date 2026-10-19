@@ -6,25 +6,21 @@ import '@mdi/font/css/materialdesignicons.css';
 
 window.__VUE__ = Vue;
 
-// Global fetch wrapper to handle API URLs in development
 const originalFetch = window.fetch;
 const apiBase = typeof __API_BASE_URL__ !== 'undefined' ? __API_BASE_URL__ : '';
-
-// Make API base URL globally available
 if (apiBase) {
   globalThis.__API_BASE_URL__ = apiBase;
 }
 
-window.fetch = function(...args) {
+window.fetch = function (...args) {
   let [resource, config] = args;
-  
-  // If resource is a string and starts with /api, prepend the API base URL
+
   if (typeof resource === 'string' && resource.startsWith('/api')) {
     if (apiBase && !resource.startsWith('http')) {
       resource = apiBase + resource;
     }
   }
-  
+
   return originalFetch(resource, config);
 };
 
@@ -47,8 +43,14 @@ import colors from 'vuetify/util/colors';
 import { md3 } from 'vuetify/blueprints';
 import { createAutoOnColorsPlugin } from './plugins/autoOnColors';
 
-const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-const initialTheme = prefersDark ? 'dark' : 'light';
+const getSystemTheme = () => {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  return 'light';
+};
+
+const initialTheme = getSystemTheme();
 
 const vuetify = createVuetify({
   blueprint: md3,
@@ -109,56 +111,4 @@ const i18n = createI18n({
   },
 });
 
-const checkTokenExpired = (token) => {
-  if (token) {
-    const payload = token.split('.')[1];
-    try {
-      const decoded = JSON.parse(atob(payload));
-      if (decoded.exp && Date.now() / 1000 > decoded.exp) {
-        return true;
-      }
-    } catch (e) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const initializeUserTheme = async () => {
-  const authToken = localStorage.getItem('authToken');
-  if (!authToken || checkTokenExpired(authToken)) {
-    return;
-  }
-
-  try {
-    const res = await fetch((apiBase || '') + '/api/v1/auth/profile', {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + authToken,
-      },
-    });
-
-    if (!res.ok) return;
-
-    const profile = await res.json();
-    let themeSetting = profile.darkmode;
-    if (typeof themeSetting === 'boolean') {
-      themeSetting = themeSetting ? 'dark' : 'light';
-    }
-
-    if (themeSetting && (themeSetting === 'dark' || themeSetting === 'light')) {
-      vuetify.theme.global.name.value = themeSetting;
-    }
-
-    if (profile.primary_color) {
-      vuetify.theme.themes.value.light.colors.primary = profile.primary_color;
-      vuetify.theme.themes.value.dark.colors.primary = profile.primary_color;
-    }
-  } catch (e) {
-    // Fall back to default theme if profile fetch fails
-  }
-};
-
-initializeUserTheme().then(() => {
-  createApp(App).use(vuetify).use(router).use(i18n).use(createAutoOnColorsPlugin(vuetify)).use(CronVuetifyPlugin).mount('#app');
-});
+createApp(App).use(vuetify).use(router).use(i18n).use(createAutoOnColorsPlugin(vuetify)).use(CronVuetifyPlugin).mount('#app');

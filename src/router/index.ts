@@ -120,17 +120,25 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'Plugin', description: 'Plugin view' },
   },
-  { path: '/mfa', component: () => import('../views/mfa.vue'), meta: { hideAppBar: true, title: 'MFA', description: 'Multi-factor authentication' } },];
+  { path: '/mfa', component: () => import('../views/mfa.vue'), meta: { hideAppBar: true, title: 'MFA', description: 'Multi-factor authentication' } },
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
 
-router.beforeEach((to) => {
+let themeInitialized = false;
+
+router.beforeEach(async (to) => {
+  if (!themeInitialized) {
+    const { loadUserThemePreference } = await import('../composables/useTheme').then((m) => m.useTheme());
+    await loadUserThemePreference();
+    themeInitialized = true;
+  }
+
   const { description } = to.meta;
   const defaultDescription = 'MOS - Modern Operating System for your home server';
-
   const descriptionElement = document.querySelector('head meta[name="description"]');
 
   if (descriptionElement) {

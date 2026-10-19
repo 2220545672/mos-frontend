@@ -162,7 +162,6 @@
   >
     <v-progress-circular color="onPrimary" size="64" indeterminate></v-progress-circular>
   </v-overlay>
-
 </template>
 
 <script setup>
@@ -170,7 +169,8 @@ import { ref, onMounted, onUnmounted, computed, watch, provide } from 'vue';
 import Login from './views/login.vue';
 import FirstSetup from './views/firstSetup.vue';
 import { showSnackbarError, showSnackbarSuccess, showSnackbarInfo, showSnackbarWarning } from './composables/snackbar';
-import { useTheme } from 'vuetify';
+import { useTheme as useVuetifyTheme } from 'vuetify';
+import { useTheme } from './composables/useTheme';
 import { useI18n } from 'vue-i18n';
 import { getContrast } from 'vuetify/lib/util/colorUtils';
 import { Toaster } from 'vue-sonner';
@@ -180,7 +180,8 @@ import { useDisplay } from 'vuetify';
 import { useRoute, useRouter } from 'vue-router';
 
 const display = useDisplay();
-const theme = useTheme();
+const { checkTokenExpired } = useTheme();
+const theme = useVuetifyTheme();
 const route = useRoute();
 const router = useRouter();
 const { locale, t } = useI18n();
@@ -234,6 +235,15 @@ watch(
 );
 
 onMounted(async () => {
+  const storedTheme = localStorage.getItem('userThemePreference');
+  if (storedTheme) {
+    theme.global.name.value = storedTheme;
+  }
+  const storedPrimaryColor = localStorage.getItem('userPrimaryColor');
+  if (storedPrimaryColor) {
+    theme.themes.value[theme.global.name.value].colors.primary = storedPrimaryColor;
+  }
+
   if (tab.value === '') {
     tab.value = 'dashboard';
   }
@@ -273,38 +283,21 @@ const applySystemThemeDefaults = () => {
 };
 
 const checkLoggedIn = async () => {
-  if (localStorage.getItem('authToken')) {
-    checkTokenExpired(localStorage.getItem('authToken'));
-    if (loggedIn.value) {
-      await getUserProfile();
-    } else {
-      loggedIn.value = false;
+  const authToken = localStorage.getItem('authToken');
+  
+  if (!authToken || checkTokenExpired(authToken)) {
+    if (authToken) {
+      localStorage.removeItem('authToken');
     }
-  } else {
     token.value = await checkFirstSetup();
     loggedIn.value = false;
+  } else {
+    await getUserProfile();
+    loggedIn.value = true;
   }
+  
   loginChecked.value = true;
 };
-
-function checkTokenExpired(token) {
-  if (token) {
-    const payload = token.split('.')[1];
-    try {
-      const decoded = JSON.parse(atob(payload));
-      if (decoded.exp && Date.now() / 1000 > decoded.exp) {
-        localStorage.removeItem('authToken');
-        loggedIn.value = false;
-        return;
-      }
-    } catch (e) {
-      loggedIn.value = false;
-      return;
-    }
-  }
-  loggedIn.value = true;
-  return;
-}
 
 const getUserProfile = async () => {
   try {
