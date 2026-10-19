@@ -109,4 +109,56 @@ const i18n = createI18n({
   },
 });
 
-createApp(App).use(vuetify).use(router).use(i18n).use(createAutoOnColorsPlugin(vuetify)).use(CronVuetifyPlugin).mount('#app');
+const checkTokenExpired = (token) => {
+  if (token) {
+    const payload = token.split('.')[1];
+    try {
+      const decoded = JSON.parse(atob(payload));
+      if (decoded.exp && Date.now() / 1000 > decoded.exp) {
+        return true;
+      }
+    } catch (e) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const initializeUserTheme = async () => {
+  const authToken = localStorage.getItem('authToken');
+  if (!authToken || checkTokenExpired(authToken)) {
+    return;
+  }
+
+  try {
+    const res = await fetch((apiBase || '') + '/api/v1/auth/profile', {
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer ' + authToken,
+      },
+    });
+
+    if (!res.ok) return;
+
+    const profile = await res.json();
+    let themeSetting = profile.darkmode;
+    if (typeof themeSetting === 'boolean') {
+      themeSetting = themeSetting ? 'dark' : 'light';
+    }
+
+    if (themeSetting && (themeSetting === 'dark' || themeSetting === 'light')) {
+      vuetify.theme.global.name.value = themeSetting;
+    }
+
+    if (profile.primary_color) {
+      vuetify.theme.themes.value.light.colors.primary = profile.primary_color;
+      vuetify.theme.themes.value.dark.colors.primary = profile.primary_color;
+    }
+  } catch (e) {
+    // Fall back to default theme if profile fetch fails
+  }
+};
+
+initializeUserTheme().then(() => {
+  createApp(App).use(vuetify).use(router).use(i18n).use(createAutoOnColorsPlugin(vuetify)).use(CronVuetifyPlugin).mount('#app');
+});

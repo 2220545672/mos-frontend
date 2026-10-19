@@ -327,11 +327,13 @@ const getUserProfile = async () => {
     if (themeSetting === null) {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       theme.change(prefersDark ? 'dark' : 'light');
-    } else {
+    } else if (themeSetting && (themeSetting === 'dark' || themeSetting === 'light')) {
       theme.change(themeSetting);
     }
     locale.value = result.language || 'en';
-    theme.themes.value[theme.global.name.value].colors.primary = result.primary_color || '#1976D2';
+    if (result.primary_color) {
+      theme.themes.value[theme.global.name.value].colors.primary = result.primary_color;
+    }
     localStorage.setItem('userid', result.id);
     localStorage.setItem('hideInactiveMenus', String(result.hide_inactive_menus));
     localStorage.setItem('groupMenus', String(result.group_menus));
