@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { installAuthGuard } from './guard';
+import { useAuth } from '../composables/useAuth';
 
 declare module 'vue-router' {
   interface RouteMeta {
-    hideAppBar?: boolean;
+    layout?: 'shell' | 'blank';
+    public?: boolean;
     title: string;
     description: string;
   }
@@ -10,8 +13,14 @@ declare module 'vue-router' {
 
 const routes: RouteRecordRaw[] = [
   { path: '', component: () => import('../views/dashboard.vue'), meta: { title: 'Dashboard', description: 'Dashboard for your server' } },
-  { path: '/login', component: () => import('../views/login.vue'), meta: { title: 'MOS Login', description: 'Login to your server' } },
-  { path: '/firstSetup', component: () => import('../views/firstSetup.vue'), props: true, meta: { title: 'MOS First Setup', description: 'Set up your server for the first time' } },
+  { path: '/login', name: 'login', component: () => import('../views/login.vue'), meta: { public: true, layout: 'blank', title: 'MOS Login', description: 'Login to your server' } },
+  {
+    path: '/firstSetup',
+    name: 'firstSetup',
+    component: () => import('../views/firstSetup.vue'),
+    props: () => ({ token: useAuth().setupToken.value }),
+    meta: { public: true, layout: 'blank', title: 'MOS First Setup', description: 'Set up your server for the first time' },
+  },
   { path: '/dashboard', component: () => import('../views/dashboard.vue'), meta: { title: 'Dashboard', description: 'Dashboard for your server' } },
   { path: '/pools', component: () => import('../views/pools.vue'), meta: { title: 'Pools', description: 'Manage storage pools' } },
   { path: '/disks', component: () => import('../views/disks.vue'), meta: { title: 'Disks', description: 'Manage disks in your server' } },
@@ -110,7 +119,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/webTerminalPopup',
     component: () => import('../views/webterminalPopup.vue'),
-    children: [{ path: '', component: () => import('../views/webterminalPopup.vue'), meta: { hideAppBar: true, title: 'Web Terminal', description: 'Access the web terminal' } }],
+    children: [{ path: '', component: () => import('../views/webterminalPopup.vue'), meta: { layout: 'blank', title: 'Web Terminal', description: 'Access the web terminal' } }],
   },
   { path: '/notifications', component: () => import('../views/notifications.vue'), meta: { title: 'Notifications', description: 'View your notifications' } },
   { path: '/plugins', component: () => import('../views/plugins.vue'), meta: { title: 'Plugins', description: 'Manage installed plugins' } },
@@ -120,13 +129,15 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'Plugin', description: 'Plugin view' },
   },
-  { path: '/mfa', component: () => import('../views/mfa.vue'), meta: { hideAppBar: true, title: 'MFA', description: 'Multi-factor authentication' } },
+  { path: '/mfa', name: 'mfa', component: () => import('../views/mfa.vue'), meta: { public: true, layout: 'blank', title: 'MFA', description: 'Multi-factor authentication' } },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+installAuthGuard(router);
 
 let themeInitialized = false;
 

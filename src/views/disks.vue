@@ -186,7 +186,7 @@
   </v-dialog>
 
   <!-- Confirm S.M.A.R.T. Dialog -->
-  <v-dialog v-model="smartDialog.value" width="1000" max-width="1000px">
+  <v-dialog v-model="smartDialog.value" max-width="1000" fullscreen-mobile>
     <v-card class="pa-0" :title="$t('smart infos')" prepend-icon="mdi-chart-timeline-variant-shimmer">
       <v-card-text style="overflow: auto">
         <div v-if="smartDialog.loading">
@@ -295,7 +295,17 @@
                   <td>{{ attr.threshold }}</td>
                   <td>{{ attr.rawValue }}</td>
                   <td>
-                    <v-btn v-if="(!smartDialog.smartDiskConfig.acknowledged || smartDialog.smartDiskConfig.acknowledged[attr.id] === null || parseInt(attr.rawValue) > smartDialog.smartDiskConfig.acknowledged[attr.id]) && attr.rawValue > 0" size="x-small" type="text" @click="acknowledgeSmartAttribute(attr.id)">
+                    <v-btn
+                      v-if="
+                        (!smartDialog.smartDiskConfig.acknowledged ||
+                          smartDialog.smartDiskConfig.acknowledged[attr.id] === null ||
+                          parseInt(attr.rawValue) > smartDialog.smartDiskConfig.acknowledged[attr.id]) &&
+                        attr.rawValue > 0
+                      "
+                      size="x-small"
+                      type="text"
+                      @click="acknowledgeSmartAttribute(attr.id)"
+                    >
                       {{ $t('acknowledge') }}
                     </v-btn>
                   </td>
@@ -319,10 +329,10 @@
   </v-dialog>
 
   <!-- Description Dialog -->
-  <v-dialog v-model="descriptionDialog.value" max-width="600px" persistent>
+  <v-dialog v-model="descriptionDialog.value" max-width="600" persistent fullscreen-mobile>
     <v-card :title="t('description') + ' ' + descriptionDialog.disk.device" prepend-icon="mdi-card-text">
       <v-card-text style="overflow: auto" class="pt-2">
-          <v-text-field v-model="descriptionDialog.disk.description" :label="t('description')" hide-details="auto"></v-text-field>
+        <v-text-field v-model="descriptionDialog.disk.description" :label="t('description')" hide-details="auto"></v-text-field>
       </v-card-text>
       <v-divider />
       <v-card-actions style="flex-shrink: 0">
@@ -359,7 +369,6 @@
       </v-list-item>
     </v-list>
   </v-menu>
-
 </template>
 
 <script setup>
@@ -434,8 +443,6 @@ const descriptionDialog = reactive({
   disk: null,
   description: '',
 });
-
-
 
 onMounted(() => {
   getDisks();
@@ -797,10 +804,8 @@ const saveSmartDiskConfig = async () => {
 };
 
 const acknowledgeSmartAttribute = async (attributeId) => {
-const payload = {
-    attributes: [ 
-      attributeId,
-    ],
+  const payload = {
+    attributes: [attributeId],
   };
 
   try {
@@ -854,7 +859,6 @@ const saveDescription = async (diskName) => {
     showSnackbarSuccess(t('description saved successfully'));
     descriptionDialog.value = false;
     return data;
-
   } catch (e) {
     const [userMessage, apiErrorMessage] = e.message.split('|$|');
     showSnackbarError(userMessage, apiErrorMessage);

@@ -51,25 +51,20 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTheme } from 'vuetify';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import mosBlack from '/mos_black.png';
 import mosWhite from '/mos_white.png';
 import { useOverlay } from '@/composables/useOverlay';
+import { useAuth } from '@/composables/useAuth';
+import { useAppearance } from '@/composables/useAppearance';
 
-const props = defineProps({
-  mfaToken: {
-    type: String,
-    default: '',
-  },
-});
-
-const emit = defineEmits(['login-success', 'refresh-drawer', 'refresh-notifications-badge']);
-
-const { locale, t } = useI18n();
+const { t } = useI18n();
 const theme = useTheme();
+const route = useRoute();
 const router = useRouter();
-const loading = ref(false);
+const { mfaToken, startSession, resolveRedirect } = useAuth();
+const { applyUser } = useAppearance();
 const isValid = ref(false);
 const formRef = ref(null);
 const totpCode = ref('');
@@ -87,7 +82,7 @@ const onSubmit = async () => {
   const ok = await formRef.value?.validate();
   if (!ok) return;
 
-  await verifyMfa(props.mfaToken, totpCode.value);
+  await verifyMfa(mfaToken.value, totpCode.value);
 };
 
 const verifyMfa = async (mfa_token, code) => {
@@ -109,30 +104,16 @@ const verifyMfa = async (mfa_token, code) => {
     }
 
     const result = await res.json();
-    localStorage.setItem('authToken', result.token);
-    localStorage.setItem('userid', result.user.id);
-    localStorage.setItem('byte_format', result.user.byte_format || 'binary');
-    localStorage.setItem('username', result.user.username || '');
-    localStorage.setItem('hideInactiveMenus', result.user.hide_inactive_menus ? 'true' : 'false');
-    localStorage.setItem('groupMenus', result.user.group_menus ? 'true' : 'false');
-
-    if (result.user.darkmode) {
-      theme.change('dark');
-    } else {
-      theme.change('light');
-    }
-
-    locale.value = result.user.language || 'en';
-    theme.themes.value[theme.global.name.value].colors.primary = result.user.primary_color || '#1976D2';
+    startSession(result);
+    applyUser(result.user);
 
     if (result.message != null && result.message !== '') {
       showSnackbarSuccess?.(t('logged in successfully'), result.message);
     } else {
-    showSnackbarSuccess?.(t('logged in successfully'));
+      showSnackbarSuccess?.(t('logged in successfully'));
     }
 
-    emit('login-success');
-    await router.push('/dashboard');
+    await router.push(resolveRedirect(route.query.redirect));
 
     return result;
   } catch (e) {

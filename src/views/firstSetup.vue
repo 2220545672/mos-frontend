@@ -109,12 +109,15 @@ import { useTheme } from 'vuetify';
 import { useOverlay } from '@/composables/useOverlay';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
 import { useRouter } from 'vue-router';
+import { useAuth } from '@/composables/useAuth';
+import { useAppearance } from '@/composables/useAppearance';
 
 const router = useRouter();
 const { t } = useI18n();
 const theme = useTheme();
 const { overlay } = useOverlay();
-const emit = defineEmits(['setup-complete']);
+const { completeSetup } = useAuth();
+const { applySystemDefaults } = useAppearance();
 const props = defineProps({
   token: String,
 });
@@ -232,7 +235,6 @@ async function nextStep() {
     step1Error.value = false;
   }
 
-  // Web user step
   if (step.value === 2 && (username.value === '' || password.value === '' || password.value !== password2.value)) {
     step2Error.value = true;
     return;
@@ -249,7 +251,10 @@ async function nextStep() {
         return;
       }
       showSnackbarSuccess(t('first setup successfully completed'));
-      emit('setup-complete');
+      completeSetup();
+      applySystemDefaults();
+      await router.push({ name: 'login' });
+      return;
     }
   }
 

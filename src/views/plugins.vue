@@ -2,17 +2,22 @@
   <v-container fluid class="d-flex justify-center">
     <v-container style="width: 100%; max-width: 1920px" class="pa-0">
       <v-container fluid class="pt-2 pr-0 pl-0 pb-2">
-        <div class="d-flex align-center ga-3 mb-4">
-          <div style="width: 4px; height: 32px; border-radius: 2px; background: rgb(var(--v-theme-primary))"></div>
-          <h2 class="font-weight-medium ma-0" style="font-weight: 600; line-height: 1.1">{{ t('plugins') }}</h2>
-        </div>
+        <v-row>
+          <v-col cols="auto" class="d-flex align-center justify-center" style="height: 40px;">
+            <v-icon @click="$router.back()" class="mr-2" style="vertical-align: middle;">mdi-arrow-left</v-icon>
+          </v-col>
+          <div class="d-flex align-center ga-3 mb-4" style="height: 40px;">
+            <div style="width: 4px; height: 32px; border-radius: 2px; background: rgb(var(--v-theme-primary))"></div>
+            <h2 class="font-weight-medium ma-0" style="font-weight: 600; line-height: 1.1">{{ t('plugins') }}</h2>
+          </div>
+        </v-row>
       </v-container>
       <v-container fluid class="pa-0">
         <v-card style="margin-bottom: 80px" class="pa-0">
           <v-card-text class="pa-0">
-            <v-container fluid class="pa-4" v-if="!loading">
-              <v-row class="ma-n2">
-                <v-col v-if="plugins.length > 0" cols="12" sm="6" md="4" lg="4" xl="3" v-for="plugin in plugins" :key="plugin.name" class="pa-2">
+            <v-container fluid class="pt-4 pl-4 pr-4 pb-4" v-if="!loading">
+              <v-row class="ga-4">
+                <v-col v-if="plugins.length > 0" cols="12" sm="6" md="4" lg="4" xl="3" v-for="plugin in plugins" :key="plugin.name">
                   <v-card style="height: 250px; display: flex; flex-direction: column" class="pa-0" @click="openPlugin(plugin)">
                     <v-card-text class="pa-0 pt-4">
                       <div class="d-flex justify-center">
@@ -73,9 +78,9 @@
                 </v-col>
               </v-row>
             </v-container>
-            <v-container v-else fluid class="pa-4 d-flex justify-center">
-              <v-row class="ma-n2" style="width: 100%">
-                <v-col v-for="n in 4" :key="n" cols="12" sm="6" md="4" lg="4" xl="3" class="pa-2">
+            <v-container v-else fluid class="pt-4 pl-4 pr-4 pb-4 d-flex justify-center">
+              <v-row class="ga-4" style="width: 100%">
+                <v-col v-for="n in 4" :key="n" cols="12" sm="6" md="4" lg="4" xl="3">
                   <v-skeleton-loader type="card" class="pa-0" />
                 </v-col>
               </v-row>

@@ -52,12 +52,19 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTheme } from 'vuetify';
+import { useRoute, useRouter } from 'vue-router';
 import { showSnackbarError, showSnackbarSuccess } from '@/composables/snackbar';
+import { useAuth } from '@/composables/useAuth';
+import { useAppearance } from '@/composables/useAppearance';
 import mosBlack from '/mos_black.png';
 import mosWhite from '/mos_white.png';
 
-const { locale, t } = useI18n();
+const { t } = useI18n();
 const theme = useTheme();
+const route = useRoute();
+const router = useRouter();
+const { mfaToken, startSession, resolveRedirect } = useAuth();
+const { applyUser } = useAppearance();
 const username = ref('');
 const password = ref('');
 const showPassword = ref(false);
@@ -68,8 +75,6 @@ const formRef = ref(null);
 const logoColorThemed = computed(() => {
   return theme.global.name.value === 'dark' ? mosWhite : mosBlack;
 });
-
-const emit = defineEmits(['refresh-drawer', 'login-success', 'mfa-required']);
 
 const rules = {
   required: (v) => !!v || v === 0 || t('required') || 'Required',
@@ -99,36 +104,17 @@ const login = async () => {
 
     //MFA required
     if (result.mfa_required) {
-      emit('refresh-drawer');
-      emit('mfa-required', result.mfa_token);
+      mfaToken.value = result.mfa_token || '';
+      await router.push({ name: 'mfa', query: route.query });
       return;
     }
 
-    localStorage.setItem('authToken', result.token);
-    localStorage.setItem('userid', result.user.id);
-    localStorage.setItem('byte_format', result.user.byte_format || 'binary');
-    localStorage.setItem('username', username.value);
-    localStorage.setItem('hideInactiveMenus', result.user.hide_inactive_menus ? 'true' : 'false');
-    localStorage.setItem('groupMenus', result.user.group_menus ? 'true' : 'false');
-
-    let themeSetting = result.user.darkmode;
-    if (typeof themeSetting === 'boolean') {
-      themeSetting = themeSetting ? 'dark' : 'light';
-    }
-
-    if (themeSetting === null) {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      theme.change(prefersDark ? 'dark' : 'light');
-    } else {
-      theme.change(themeSetting);
-    }
-    locale.value = result.user.language || 'en';
-    theme.themes.value[theme.global.name.value].colors.primary = result.user.primary_color || '#1976D2';
+    startSession(result, username.value);
+    applyUser(result.user);
 
     showSnackbarSuccess?.(t('logged in successfully'));
 
-    emit('refresh-drawer');
-    emit('login-success');
+    await router.push(resolveRedirect(route.query.redirect));
   } catch (e) {
     const [userMessage, apiErrorMessage] = (e.message || '').split('|$|');
     showSnackbarError?.(userMessage, apiErrorMessage);

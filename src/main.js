@@ -12,16 +12,23 @@ if (apiBase) {
   globalThis.__API_BASE_URL__ = apiBase;
 }
 
-window.fetch = function (...args) {
+window.fetch = async function (...args) {
   let [resource, config] = args;
+  const isApiCall = typeof resource === 'string' && resource.startsWith('/api');
 
-  if (typeof resource === 'string' && resource.startsWith('/api')) {
+  if (isApiCall) {
     if (apiBase && !resource.startsWith('http')) {
       resource = apiBase + resource;
     }
   }
 
-  return originalFetch(resource, config);
+  const response = await originalFetch(resource, config);
+
+  if (response.status === 401 && isApiCall) {
+    window.dispatchEvent(new CustomEvent('auth-expired'));
+  }
+
+  return response;
 };
 
 import { createI18n } from 'vue-i18n';

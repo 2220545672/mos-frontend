@@ -1,18 +1,7 @@
+import { useAuth } from './useAuth';
+
 export const useTheme = () => {
-  const checkTokenExpired = (token: string): boolean => {
-    if (token) {
-      const payload = token.split('.')[1];
-      try {
-        const decoded = JSON.parse(atob(payload));
-        if (decoded.exp && Date.now() / 1000 > decoded.exp) {
-          return true;
-        }
-      } catch (e) {
-        return true;
-      }
-    }
-    return false;
-  };
+  const { checkTokenExpired } = useAuth();
 
   const loadUserThemePreference = async () => {
     const authToken = localStorage.getItem('authToken');
