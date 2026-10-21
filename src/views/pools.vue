@@ -22,7 +22,14 @@
                 <v-spacer />
                 <v-tooltip location="top">
                   <template #activator="{ props }">
-                    <v-chip v-if="pool.type == 'nonraid' && pool.status.parity_valid != null" size="x-small" class="mr-1" variant="tonal" :color="pool.status.parity_valid ? 'green' : 'red'" v-bind="props">
+                    <v-chip
+                      v-if="pool.type == 'nonraid' && pool.status.parity_valid != null"
+                      size="x-small"
+                      class="mr-1"
+                      variant="tonal"
+                      :color="pool.status.parity_valid ? 'green' : 'red'"
+                      v-bind="props"
+                    >
                       <v-icon v-if="pool.status.parity_valid" size="16" class="mr-1">mdi-check</v-icon>
                       <v-icon v-else size="16" class="mr-1">mdi-close</v-icon>
                       <span class="d-none d-sm-inline">{{ pool.status.parity_valid == true ? $t('valid') : $t('invalid') }}</span>
@@ -290,7 +297,14 @@
                         </td>
                         <td class="pa-1" style="vertical-align: bottom">
                           <div v-if="parity_device.storage">
-                            <v-progress-linear :model-value="parity_device.storage.usagePercent" height="6" :color="getUsageColor(parity_device.storage.usagePercent, pool)" rounded class="flex-grow-1" style="min-width: 40px" />
+                            <v-progress-linear
+                              :model-value="parity_device.storage.usagePercent"
+                              height="6"
+                              :color="getUsageColor(parity_device.storage.usagePercent, pool)"
+                              rounded
+                              class="flex-grow-1"
+                              style="min-width: 40px"
+                            />
                             <div class="d-flex justify-space-between align-center" style="white-space: nowrap; font-size: 0.8rem !important">
                               <span class="text-caption text-medium-emphasis" style="white-space: nowrap; font-size: 0.8rem !important">{{ Math.round(parity_device.storage.usagePercent) }}%</span>
                               <span v-if="parity_device.storage.usagePercent != null">{{ parity_device.storage.usedSpace_human }} / {{ parity_device.storage.totalSpace_human }}</span>
@@ -371,15 +385,7 @@
                   </div>
                   <div v-if="vpool.status" class="px-3 pb-2">
                     <div class="mb-1">
-                      <v-progress-linear
-                        :model-value="vpool.status.usagePercent"
-                        height="8"
-                        color="green"
-                        rounded
-                        bg-opacity="0.25"
-                        class="flex-grow-1"
-                        style="min-width: 80px"
-                      />
+                      <v-progress-linear :model-value="vpool.status.usagePercent" height="8" color="green" rounded bg-opacity="0.25" class="flex-grow-1" style="min-width: 80px" />
                       <div class="mt-1 d-flex justify-space-between align-center" style="white-space: nowrap">
                         <span class="text-caption text-medium-emphasis">{{ vpool.status.usagePercent }}%</span>
                         <span class="text-caption text-medium-emphasis">{{ vpool.status.usedSpace_human }} / {{ vpool.status.totalSpace_human }}</span>
@@ -636,7 +642,15 @@
             </div>
           </v-slide-y-transition>
         </div>
-        <v-switch v-if="createPoolDialog.type === 'mergerfs' || createPoolDialog.type === 'nonraid'" v-model="createPoolDialog.moveonenospc" :label="$t('moveonenospc')" hide-details density="compact" color="green" inset />
+        <v-switch
+          v-if="createPoolDialog.type === 'mergerfs' || createPoolDialog.type === 'nonraid'"
+          v-model="createPoolDialog.moveonenospc"
+          :label="$t('moveonenospc')"
+          hide-details
+          density="compact"
+          color="green"
+          inset
+        />
         <v-switch v-model="createPoolDialog.automount" :label="$t('automount')" hide-details density="compact" color="green" inset />
         <v-switch v-model="createPoolDialog.format" :label="$t('format')" hide-details density="compact" color="red" inset />
         <v-switch v-model="createPoolDialog.shared" :label="$t('shared')" hide-details density="compact" color="green" inset />
@@ -680,11 +694,7 @@
         <v-form>
           <v-select
             v-model="addMergerfsDevicesDialog.devices"
-            :items="
-              Array.isArray(unassignedDisks)
-                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-                : []
-            "
+            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
             item-title="title"
             item-value="value"
             :label="$t('devices')"
@@ -761,11 +771,7 @@
         />
         <v-select
           v-model="replaceMergerfsDeviceDialog.newDevice"
-          :items="
-            Array.isArray(unassignedDisks)
-              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-              : []
-          "
+          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
           item-title="title"
           item-value="value"
           :label="$t('new device')"
@@ -807,11 +813,7 @@
         />
         <v-select
           v-model="replaceNonRaidDeviceDialog.newDevice"
-          :items="
-            Array.isArray(unassignedDisks)
-              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-              : []
-          "
+          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
           item-title="title"
           item-value="value"
           :label="$t('new device')"
@@ -918,7 +920,9 @@
                 </template>
                 <div class="w-100">
                   <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
-                  <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-caption">
+                    {{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}
+                  </v-list-item-subtitle>
                 </div>
                 <template #append>
                   <div class="d-flex gap-1">
@@ -966,7 +970,9 @@
               </template>
               <div class="w-100">
                 <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
-                <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+                <v-list-item-subtitle class="text-caption">
+                  {{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}
+                </v-list-item-subtitle>
               </div>
               <template #append>
                 <div class="d-flex gap-1">
@@ -1007,7 +1013,9 @@
                 </template>
                 <div class="w-100">
                   <v-list-item-title class="font-weight-medium">{{ device.device }}</v-list-item-title>
-                  <v-list-item-subtitle class="text-caption">{{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-caption">
+                    {{ device.mountPoint || '—' }} • {{ device.storage?.totalSpace_human || '—' }} • {{ device.diskInfo?.diskSerial || '—' }}
+                  </v-list-item-subtitle>
                 </div>
               </v-list-item>
             </v-list>
@@ -1037,11 +1045,7 @@
         <p class="mb-4">{{ $t('select devices to add as parity') }}</p>
         <v-select
           v-model="addMergerfsParityDevicesDialog.devices"
-          :items="
-            Array.isArray(unassignedDisks)
-              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-              : []
-          "
+          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
           item-title="title"
           item-value="value"
           :label="$t('devices')"
@@ -1065,7 +1069,14 @@
       <v-card-actions style="flex-shrink: 0">
         <v-btn @click="addMergerfsParityDevicesDialog.value = false" color="onPrimary">{{ $t('cancel') }}</v-btn>
         <v-btn
-          @click="addMergerfsParityDevice(addMergerfsParityDevicesDialog.pool.id, addMergerfsParityDevicesDialog.devices, addMergerfsParityDevicesDialog.format, addMergerfsParityDevicesDialog.skip_size_check)"
+          @click="
+            addMergerfsParityDevice(
+              addMergerfsParityDevicesDialog.pool.id,
+              addMergerfsParityDevicesDialog.devices,
+              addMergerfsParityDevicesDialog.format,
+              addMergerfsParityDevicesDialog.skip_size_check,
+            )
+          "
           color="onPrimary"
         >
           {{ $t('add') }}
@@ -1131,11 +1142,7 @@
           />
           <v-select
             v-model="replaceMergerfsParityDeviceDialog.newDevice"
-            :items="
-              Array.isArray(unassignedDisks)
-                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-                : []
-            "
+            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
             item-title="title"
             item-value="value"
             :label="$t('new device')"
@@ -1183,11 +1190,7 @@
         <p class="mb-4">{{ $t('select device to add to pool') }}</p>
         <v-select
           v-model="addNonRaidDeviceDialog.device"
-          :items="
-            Array.isArray(unassignedDisks)
-              ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-              : []
-          "
+          :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
           item-title="title"
           item-value="value"
           :label="$t('device')"
@@ -1221,11 +1224,7 @@
         <v-form>
           <v-select
             v-model="addNonRaidParityDialog.device"
-            :items="
-              Array.isArray(unassignedDisks)
-                ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device }))
-                : []
-            "
+            :items="Array.isArray(unassignedDisks) ? unassignedDisks.map((disk) => ({ title: `${disk.device} (${disk.size_human || '—'}) (${disk.serial || '—'})`, value: disk.device })) : []"
             item-title="title"
             item-value="value"
             :label="$t('device')"
@@ -1317,47 +1316,41 @@
     <v-card class="pa-0" :title="t('btrfs settings')" prepend-icon="mdi-cog" style="max-height: 80vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto; flex: 1">
         <span class="text-title-medium font-weight-medium">{{ $t('btrfs schedules') }}</span>
-        <v-row align="center" class="pt-4">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="btrfsSettingsDialog.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('scrub') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="btrfsSettingsDialog.scrub.enabled">
-            <v-text-field
-              v-model="btrfsSettingsDialog.scrub.schedule"
-              :label="$t('scrub schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(btrfsSettingsDialog.scrub.schedule, (schedule) => (btrfsSettingsDialog.scrub.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
-        <v-row v-if="btrfsSettingsDialog.pool.type === 'btrfs' && btrfsSettingsDialog.pool.data_devices.length > 1" align="center">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="btrfsSettingsDialog.balance.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('balance') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="btrfsSettingsDialog.balance.enabled">
-            <v-text-field
-              v-model="btrfsSettingsDialog.balance.schedule"
-              :label="$t('balance schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(btrfsSettingsDialog.balance.schedule, (schedule) => (btrfsSettingsDialog.balance.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="btrfsSettingsDialog.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('scrub') }}</span>
+          </div>
+          <v-text-field
+            v-model="btrfsSettingsDialog.scrub.schedule"
+            :label="$t('scrub schedule (cron)')"
+            :disabled="!btrfsSettingsDialog.scrub.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(btrfsSettingsDialog.scrub.schedule, (schedule) => (btrfsSettingsDialog.scrub.schedule = schedule))"
+          />
+        </div>
+        <div class="mb-4" v-if="btrfsSettingsDialog.pool.type === 'btrfs' && btrfsSettingsDialog.pool.data_devices.length > 1">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="btrfsSettingsDialog.balance.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('balance') }}</span>
+          </div>
+          <v-text-field
+            v-model="btrfsSettingsDialog.balance.schedule"
+            :label="$t('balance schedule (cron)')"
+            :disabled="!btrfsSettingsDialog.balance.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(btrfsSettingsDialog.balance.schedule, (schedule) => (btrfsSettingsDialog.balance.schedule = schedule))"
+          />
+        </div>
         <v-divider class="mt-6 mb-4"></v-divider>
         <span class="text-title-medium font-weight-medium">{{ $t('usage alerts') }}</span>
         <v-row class="mt-4">
           <v-col cols="12" md="6">
-            <v-text-field v-model="btrfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" hide-details="auto"/>
+            <v-text-field v-model="btrfsSettingsDialog.usage_alert.warning" :label="$t('warning')" type="number" suffix="%" hide-details="auto" />
           </v-col>
           <v-col cols="12" md="6">
             <v-text-field v-model="btrfsSettingsDialog.usage_alert.alert" :label="$t('alert')" type="number" suffix="%" hide-details="auto" />
@@ -1368,11 +1361,11 @@
         <div v-if="btrfsSettingsDialog.pool && btrfsSettingsDialog.pool.data_devices.length > 0" class="mt-4">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.data_devices, btrfsSettingsDialog.spindown.data_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('btrfs-data', btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.data_devices, btrfsSettingsDialog.spindown.data_devices)"
             >
@@ -1399,13 +1392,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(btrfsSettingsDialog.spindown.data_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(btrfsSettingsDialog.spindown.data_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1413,11 +1400,11 @@
         <div v-if="btrfsSettingsDialog.pool && btrfsSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.parity_devices, btrfsSettingsDialog.spindown.parity_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('btrfs-parity', btrfsSettingsDialog.pool, btrfsSettingsDialog.pool.parity_devices, btrfsSettingsDialog.spindown.parity_devices)"
             >
@@ -1444,13 +1431,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(btrfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(btrfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1471,60 +1452,51 @@
     <v-card class="pa-0" :title="t('mergerfs settings')" prepend-icon="mdi-cog" style="max-height: 70vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto; flex: 1">
         <span class="text-title-medium font-weight-medium">{{ $t('snapraid schedules') }}</span>
-        <v-row align="center" class="pt-4">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('sync') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.enabled">
-            <v-text-field
-              v-model="mergerfsSettingsDialog.snapraid_sync.schedule"
-              :label="$t('sync schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
-        <v-row align="center" class="mt-2">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('check') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.check.enabled">
-            <v-text-field
-              v-model="mergerfsSettingsDialog.snapraid_sync.check.schedule"
-              :label="$t('check schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.check.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.check.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
-        <v-row align="center" class="mt-2">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('scrub') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="mergerfsSettingsDialog.snapraid_sync.scrub.enabled">
-            <v-text-field
-              v-model="mergerfsSettingsDialog.snapraid_sync.scrub.schedule"
-              :label="$t('scrub schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.scrub.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.scrub.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('sync') }}</span>
+          </div>
+          <v-text-field
+            v-model="mergerfsSettingsDialog.snapraid_sync.schedule"
+            :label="$t('sync schedule (cron)')"
+            :disabled="!mergerfsSettingsDialog.snapraid_sync.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.schedule = schedule))"
+          />
+        </div>
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('check') }}</span>
+          </div>
+          <v-text-field
+            v-model="mergerfsSettingsDialog.snapraid_sync.check.schedule"
+            :label="$t('check schedule (cron)')"
+            :disabled="!mergerfsSettingsDialog.snapraid_sync.check.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.check.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.check.schedule = schedule))"
+          />
+        </div>
+        <div class="mb-4">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="mergerfsSettingsDialog.snapraid_sync.scrub.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('scrub') }}</span>
+          </div>
+          <v-text-field
+            v-model="mergerfsSettingsDialog.snapraid_sync.scrub.schedule"
+            :label="$t('scrub schedule (cron)')"
+            :disabled="!mergerfsSettingsDialog.snapraid_sync.scrub.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(mergerfsSettingsDialog.snapraid_sync.scrub.schedule, (schedule) => (mergerfsSettingsDialog.snapraid_sync.scrub.schedule = schedule))"
+          />
+        </div>
         <v-divider class="mt-6 mb-4"></v-divider>
         <span class="text-title-medium font-weight-medium">{{ $t('mergerfs policies') }}</span>
         <v-select v-model="mergerfsSettingsDialog.mergerfs_policies.create" :items="mergerfsSettingsDialog.availablePolicies" :label="$t('create policy')" density="comfortable" class="mt-4" />
@@ -1547,11 +1519,11 @@
         <div v-if="mergerfsSettingsDialog.pool && mergerfsSettingsDialog.pool.data_devices.length > 0" class="mt-4">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.data_devices, mergerfsSettingsDialog.spindown.data_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('mergerfs-data', mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.data_devices, mergerfsSettingsDialog.spindown.data_devices)"
             >
@@ -1578,13 +1550,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.data_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.data_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1592,11 +1558,11 @@
         <div v-if="mergerfsSettingsDialog.pool && mergerfsSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.parity_devices, mergerfsSettingsDialog.spindown.parity_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('mergerfs-parity', mergerfsSettingsDialog.pool, mergerfsSettingsDialog.pool.parity_devices, mergerfsSettingsDialog.spindown.parity_devices)"
             >
@@ -1623,13 +1589,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(mergerfsSettingsDialog.spindown.parity_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1650,24 +1610,21 @@
     <v-card class="pa-0" :title="t('nonraid settings')" prepend-icon="mdi-cog" style="max-height: 70vh; display: flex; flex-direction: column">
       <v-card-text style="overflow: auto; flex: 1">
         <span class="text-title-medium font-weight-medium">{{ $t('nonraid schedules') }}</span>
-        <v-row align="center" class="pt-4">
-          <v-col cols="4">
-            <div class="d-flex align-center">
-              <v-switch v-model="nonraidSettingsDialog.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
-              <span class="text-body-2">{{ $t('check') }}</span>
-            </div>
-          </v-col>
-          <v-col cols="8" v-if="nonraidSettingsDialog.check.enabled">
-            <v-text-field
-              v-model="nonraidSettingsDialog.check.schedule"
-              :label="$t('check schedule (cron)')"
-              hide-details="auto"
-              density="compact"
-              append-inner-icon="mdi-calendar-clock"
-              @click:append-inner="openCronDialog(nonraidSettingsDialog.check.schedule, (schedule) => (nonraidSettingsDialog.check.schedule = schedule))"
-            />
-          </v-col>
-        </v-row>
+        <div class="mb-4 mt-4">
+          <div class="d-flex align-center mb-2">
+            <v-switch v-model="nonraidSettingsDialog.check.enabled" hide-details="auto" density="compact" color="green" inset class="mr-2" />
+            <span class="text-body-1">{{ $t('check') }}</span>
+          </div>
+          <v-text-field
+            v-model="nonraidSettingsDialog.check.schedule"
+            :label="$t('check schedule (cron)')"
+            :disabled="!nonraidSettingsDialog.check.enabled"
+            hide-details="auto"
+            density="compact"
+            append-inner-icon="mdi-calendar-clock"
+            @click:append-inner="openCronDialog(nonraidSettingsDialog.check.schedule, (schedule) => (nonraidSettingsDialog.check.schedule = schedule))"
+          />
+        </div>
 
         <v-divider class="mt-6 mb-4"></v-divider>
 
@@ -1687,11 +1644,11 @@
         <div v-if="nonraidSettingsDialog.pool && nonraidSettingsDialog.pool.data_devices.length > 0" class="mt-4">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('data devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.data_devices, nonraidSettingsDialog.spindown.data_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('nonraid-data', nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.data_devices, nonraidSettingsDialog.spindown.data_devices)"
             >
@@ -1718,13 +1675,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(nonraidSettingsDialog.spindown.data_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(nonraidSettingsDialog.spindown.data_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1732,11 +1683,11 @@
         <div v-if="nonraidSettingsDialog.pool && nonraidSettingsDialog.pool.parity_devices.length > 0" class="mt-6">
           <div class="d-flex align-center justify-space-between mb-2">
             <span class="text-body-2 font-weight-medium">{{ $t('parity devices') }}</span>
-            <v-btn 
+            <v-btn
               v-if="getAvailableSpindownDevices(nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.parity_devices, nonraidSettingsDialog.spindown.parity_devices).length > 0"
-              variant="text" 
-              size="small" 
-              color="success" 
+              variant="text"
+              size="small"
+              color="success"
               prepend-icon="mdi-plus"
               @click="openAddSpindownDeviceDialog('nonraid-parity', nonraidSettingsDialog.pool, nonraidSettingsDialog.pool.parity_devices, nonraidSettingsDialog.spindown.parity_devices)"
             >
@@ -1763,13 +1714,7 @@
                 />
               </v-col>
               <v-col class="flex-grow-0 pl-2">
-                <v-btn 
-                  icon="mdi-delete-outline" 
-                  variant="text" 
-                  color="error" 
-                  size="small"
-                  @click="removeSpindownDevice(nonraidSettingsDialog.spindown.parity_devices, spindownDevice.slot)"
-                />
+                <v-btn icon="mdi-delete-outline" variant="text" color="error" size="small" @click="removeSpindownDevice(nonraidSettingsDialog.spindown.parity_devices, spindownDevice.slot)" />
               </v-col>
             </v-row>
           </v-sheet>
@@ -1823,13 +1768,7 @@
     <v-card>
       <v-card-title>{{ $t('add') }} {{ $t('device') }}</v-card-title>
       <v-card-text>
-        <v-select
-          v-model="addSpindownDeviceDialog.selectedDevice"
-          :items="addSpindownDeviceDialog.availableDevices"
-          item-title="device"
-          item-value="slot"
-          :label="$t('device')"
-        />
+        <v-select v-model="addSpindownDeviceDialog.selectedDevice" :items="addSpindownDeviceDialog.availableDevices" item-title="device" item-value="slot" :label="$t('device')" />
       </v-card-text>
       <v-divider />
       <v-card-actions>
@@ -1947,8 +1886,8 @@ const createPoolDialog = reactive({
   compression: 'lz4',
   background_compression: 'zstd',
   cache_mode: 'writethrough',
-  minfreespace: "20G",
-  moveonenospc: true,  
+  minfreespace: '20G',
+  moveonenospc: true,
 });
 const deletePoolDialog = reactive({
   value: false,
@@ -2256,7 +2195,7 @@ const performSpinAction = (action) => {
 };
 const removeSpindownDevice = (devices, slot) => {
   if (!devices || !Array.isArray(devices)) return;
-  const index = devices.findIndex(d => d.slot === slot);
+  const index = devices.findIndex((d) => d.slot === slot);
   if (index > -1) {
     devices.splice(index, 1);
   }
@@ -2269,12 +2208,10 @@ const cleanSpindownConfig = (spindown) => {
     const num = Number(value);
     return isNaN(num) ? null : num;
   };
-  
+
   return {
-    data_devices: (spindown.data_devices || [])
-      .map(d => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
-    parity_devices: (spindown.parity_devices || [])
-      .map(d => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
+    data_devices: (spindown.data_devices || []).map((d) => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
+    parity_devices: (spindown.parity_devices || []).map((d) => ({ slot: d.slot, device: d.device, value: normalizeValue(d.value) })),
   };
 };
 const ensureSpindownNull = (device) => {
@@ -2284,11 +2221,11 @@ const ensureSpindownNull = (device) => {
 };
 const getAvailableSpindownDevices = (pool, deviceArray, configArray) => {
   if (!pool || !deviceArray || !configArray) return [];
-  return deviceArray.filter(device => !configArray.find(d => d.slot === device.slot));
+  return deviceArray.filter((device) => !configArray.find((d) => d.slot === device.slot));
 };
 const addSpindownDevice = (pool, deviceArray, configArray, selectedSlot) => {
-  const device = deviceArray.find(d => d.slot === selectedSlot);
-  if (device && !configArray.find(d => d.slot === device.slot)) {
+  const device = deviceArray.find((d) => d.slot === selectedSlot);
+  if (device && !configArray.find((d) => d.slot === device.slot)) {
     configArray.push({ slot: device.slot, device: device.device, value: null });
   }
 };
@@ -2300,42 +2237,42 @@ const openAddSpindownDeviceDialog = (dialogType, pool, deviceArray, configArray)
 };
 const confirmAddSpindownDevice = () => {
   if (!addSpindownDeviceDialog.selectedDevice || !addSpindownDeviceDialog.dialogType) return;
-  
+
   const dialogType = addSpindownDeviceDialog.dialogType;
   const selectedSlot = addSpindownDeviceDialog.selectedDevice;
-  
+
   if (dialogType === 'btrfs-data') {
-    const device = btrfsSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
-    if (device && !btrfsSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+    const device = btrfsSettingsDialog.pool.data_devices.find((d) => d.slot === selectedSlot);
+    if (device && !btrfsSettingsDialog.spindown.data_devices.find((d) => d.slot === device.slot)) {
       btrfsSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   } else if (dialogType === 'btrfs-parity') {
-    const device = btrfsSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
-    if (device && !btrfsSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+    const device = btrfsSettingsDialog.pool.parity_devices.find((d) => d.slot === selectedSlot);
+    if (device && !btrfsSettingsDialog.spindown.parity_devices.find((d) => d.slot === device.slot)) {
       btrfsSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   } else if (dialogType === 'mergerfs-data') {
-    const device = mergerfsSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
-    if (device && !mergerfsSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+    const device = mergerfsSettingsDialog.pool.data_devices.find((d) => d.slot === selectedSlot);
+    if (device && !mergerfsSettingsDialog.spindown.data_devices.find((d) => d.slot === device.slot)) {
       mergerfsSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   } else if (dialogType === 'mergerfs-parity') {
-    const device = mergerfsSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
-    if (device && !mergerfsSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+    const device = mergerfsSettingsDialog.pool.parity_devices.find((d) => d.slot === selectedSlot);
+    if (device && !mergerfsSettingsDialog.spindown.parity_devices.find((d) => d.slot === device.slot)) {
       mergerfsSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   } else if (dialogType === 'nonraid-data') {
-    const device = nonraidSettingsDialog.pool.data_devices.find(d => d.slot === selectedSlot);
-    if (device && !nonraidSettingsDialog.spindown.data_devices.find(d => d.slot === device.slot)) {
+    const device = nonraidSettingsDialog.pool.data_devices.find((d) => d.slot === selectedSlot);
+    if (device && !nonraidSettingsDialog.spindown.data_devices.find((d) => d.slot === device.slot)) {
       nonraidSettingsDialog.spindown.data_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   } else if (dialogType === 'nonraid-parity') {
-    const device = nonraidSettingsDialog.pool.parity_devices.find(d => d.slot === selectedSlot);
-    if (device && !nonraidSettingsDialog.spindown.parity_devices.find(d => d.slot === device.slot)) {
+    const device = nonraidSettingsDialog.pool.parity_devices.find((d) => d.slot === selectedSlot);
+    if (device && !nonraidSettingsDialog.spindown.parity_devices.find((d) => d.slot === device.slot)) {
       nonraidSettingsDialog.spindown.parity_devices.push({ slot: device.slot, device: device.device, value: null });
     }
   }
-  
+
   addSpindownDeviceDialog.value = false;
 };
 const openManageMergerfsDevicesDialog = (pool) => {
@@ -2479,84 +2416,108 @@ const openPoolSettingsDialog = async (pool) => {
 };
 const openBtrfsSettingsDialog = (pool) => {
   btrfsSettingsDialog.pool = pool;
-  btrfsSettingsDialog.scrub = JSON.parse(JSON.stringify(pool.config.scrub || {
-    enabled: false,
-    schedule: '0 4 * * WED',
-  }));
-  btrfsSettingsDialog.balance = JSON.parse(JSON.stringify(pool.config.balance || {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  }));
-  btrfsSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
-    warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
-    alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  }));
-  
+  btrfsSettingsDialog.scrub = JSON.parse(
+    JSON.stringify(
+      pool.config.scrub || {
+        enabled: false,
+        schedule: '0 4 * * WED',
+      },
+    ),
+  );
+  btrfsSettingsDialog.balance = JSON.parse(
+    JSON.stringify(
+      pool.config.balance || {
+        enabled: false,
+        schedule: '0 5 * * SUN',
+      },
+    ),
+  );
+  btrfsSettingsDialog.usage_alert = JSON.parse(
+    JSON.stringify({
+      warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
+      alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
+    }),
+  );
+
   const spindownConfig = pool.config.spindown || {
     data_devices: [],
     parity_devices: [],
   };
-  
-  btrfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
-  btrfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
-  
+
+  btrfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
+  btrfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+
   btrfsSettingsDialog.value = true;
 };
 const openMergerfsSettingsDialog = async (pool) => {
   mergerfsSettingsDialog.pool = pool;
   const policies = await getMergerfsPolicies(pool.id);
-  mergerfsSettingsDialog.mergerfs_policies = JSON.parse(JSON.stringify({
-    create: policies.create ? policies.create : 'pfrd',
-    search: policies.search ? policies.search : 'ff',
-  }));
-  mergerfsSettingsDialog.snapraid_sync = JSON.parse(JSON.stringify(pool.config.sync
-    ? pool.config.sync
-    : {
-        enabled: false,
-        schedule: '30 0 * * *',
-        check: {
-          enabled: false,
-          schedule: '0 0 * */3 SUN',
-        },
-        scrub: {
-          enabled: false,
-          schedule: '0 4 * * WED',
-        },
-      }));
-  mergerfsSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
-    warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
-    alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  }));
-  
+  mergerfsSettingsDialog.mergerfs_policies = JSON.parse(
+    JSON.stringify({
+      create: policies.create ? policies.create : 'pfrd',
+      search: policies.search ? policies.search : 'ff',
+    }),
+  );
+  mergerfsSettingsDialog.snapraid_sync = JSON.parse(
+    JSON.stringify(
+      pool.config.sync
+        ? pool.config.sync
+        : {
+            enabled: false,
+            schedule: '30 0 * * *',
+            check: {
+              enabled: false,
+              schedule: '0 0 * */3 SUN',
+            },
+            scrub: {
+              enabled: false,
+              schedule: '0 4 * * WED',
+            },
+          },
+    ),
+  );
+  mergerfsSettingsDialog.usage_alert = JSON.parse(
+    JSON.stringify({
+      warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
+      alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
+    }),
+  );
+
   const spindownConfig = pool.config.spindown || {
     data_devices: [],
     parity_devices: [],
   };
-  
-  mergerfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
-  mergerfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
-  
+
+  mergerfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
+  mergerfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+
   mergerfsSettingsDialog.value = true;
 };
 const openNonraidSettingsDialog = (pool) => {
   nonraidSettingsDialog.pool = pool;
-  nonraidSettingsDialog.check = JSON.parse(JSON.stringify(pool.config.check || {
-    enabled: false,
-    schedule: '0 5 * * SUN',
-  }));
-  nonraidSettingsDialog.usage_alert = JSON.parse(JSON.stringify({
-    warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
-    alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
-  }));
-  
+  nonraidSettingsDialog.check = JSON.parse(
+    JSON.stringify(
+      pool.config.check || {
+        enabled: false,
+        schedule: '0 5 * * SUN',
+      },
+    ),
+  );
+  nonraidSettingsDialog.usage_alert = JSON.parse(
+    JSON.stringify({
+      warning: pool.config.usage_alert ? pool.config.usage_alert.warning : 85,
+      alert: pool.config.usage_alert ? pool.config.usage_alert.alert : 90,
+    }),
+  );
+
   const spindownConfig = pool.config.spindown || {
     data_devices: [],
     parity_devices: [],
   };
-  
-  nonraidSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map(d => ({ ...d }));
-  nonraidSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map(d => ({ ...d }));
-  
+
+  nonraidSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
+  nonraidSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+
   nonraidSettingsDialog.value = true;
 };
 const openCreateVPoolDialog = () => {
@@ -2616,7 +2577,8 @@ const getPools = async () => {
       showOverlay: false,
     });
     pools.value = result.sort((a, b) => a.index - b.index);
-  } catch {} finally {
+  } catch {
+  } finally {
     poolsLoading.value = false;
   }
 };
@@ -2628,7 +2590,8 @@ const getVPools = async () => {
       showOverlay: false,
     });
     vpools.value = result.sort((a, b) => a.index - b.index);
-  } catch {} finally {
+  } catch {
+  } finally {
     vpoolsLoading.value = false;
   }
 };
@@ -2691,7 +2654,8 @@ const getUnassignedDisks = async () => {
       showOverlay: false,
     });
     unassignedDisks.value = result.unassignedDisks || [];
-  } catch {} finally {
+  } catch {
+  } finally {
     unassignedDisksLoading.value = false;
   }
 };
@@ -3430,12 +3394,12 @@ const switchPoolType = async () => {
 const getUsageColor = (usagePercent, pool) => {
   let warningThreshold = 75;
   let alertThreshold = 90;
-  
+
   if (pool.config && pool.config.usage_alert) {
     warningThreshold = pool.config.usage_alert.warning ?? 75;
     alertThreshold = pool.config.usage_alert.alert ?? 90;
   }
-  
+
   if (usagePercent < warningThreshold) {
     return 'green';
   } else if (usagePercent < alertThreshold) {
