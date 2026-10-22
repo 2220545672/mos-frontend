@@ -1850,5 +1850,9 @@
   "parity devices": "Paritätsgeräte",
   "spindown (min)": "Spindown (Min.)",
   "inherit": "Erben",
-  "no devices": "Keine Geräte"
+  "no devices": "Keine Geräte",
+  "initializing system": "System wird initialisiert",
+  "loading modules": "Module werden geladen",
+  "preparing interface": "Benutzeroberfläche wird vorbereitet",
+  "almost there": "Gleich geht's los"
 }

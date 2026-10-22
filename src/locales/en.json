@@ -1850,5 +1850,9 @@
   "parity devices": "Parity devices",
   "spindown (min)": "Spindown (min)",
   "inherit": "Inherit",
-  "no devices": "No devices"
+  "no devices": "No devices",
+  "initializing system": "Initializing system",
+  "loading modules": "Loading modules",
+  "preparing interface": "Preparing interface",
+  "almost there": "Almost there"
 }

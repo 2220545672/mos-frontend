@@ -1,6 +1,13 @@
 <template>
   <v-app id="app">
-    <v-progress-circular v-if="!ready" indeterminate color="onPrimary" class="ma-5"></v-progress-circular>
+    <div v-if="!ready" class="loading-screen">
+      <div class="loading-container">
+        <div class="logo-wrapper">
+          <img :src="currentLogo" alt="MOS Logo" class="mos-logo" />
+        </div>
+        <p class="loading-text">{{ loadingStatus }}</p>
+      </div>
+    </div>
     <component :is="layout" v-else />
   </v-app>
 
@@ -18,26 +25,51 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, provide } from 'vue';
+import { ref, computed, watch, provide, onMounted } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import { useTheme as useVuetifyTheme } from 'vuetify';
+import { useI18n } from 'vue-i18n';
 import { Toaster } from 'vue-sonner';
 import AppShell from './layouts/AppShell.vue';
 import { useAuth } from './composables/useAuth';
 import { useAppearance } from './composables/useAppearance';
 import { useServerInfo } from './composables/useServerInfo';
+import mosIcon from '/mos_icon.svg?url';
+import mosIconWhite from '/mos_icon_white.svg?url';
 
 const route = useRoute();
 const router = useRouter();
 const theme = useVuetifyTheme();
+const { t } = useI18n();
 const { isLoggedIn } = useAuth();
 const { hostname } = useServerInfo();
 const { applyStoredAppearance, applySystemDefaults } = useAppearance();
 
 const ready = ref(false);
 const overlay = ref(false);
+const loadingStatus = ref('');
+
+const currentLogo = computed(() => 
+  theme.global.name.value === 'dark' ? mosIconWhite : mosIcon
+);
+
+const startLoadingMessages = () => {
+  const messages = [
+    t('initializing system'),
+    t('loading modules'),
+    t('preparing interface'),
+    t('almost there')
+  ];
+  
+  const randomIndex = Math.floor(Math.random() * messages.length);
+  loadingStatus.value = messages[randomIndex];
+};
 
 provide('overlay', overlay);
+
+onMounted(() => {
+  startLoadingMessages();
+});
 
 router.isReady().then(() => {
   ready.value = true;
@@ -69,6 +101,74 @@ watch(
 <style>
 html {
   scrollbar-gutter: stable;
+}
+
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--v-theme-background) 0%, var(--v-theme-surface) 100%);
+  z-index: 9999;
+  animation: fadeOut 0.5s ease-in-out 2.5s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-wrapper {
+  animation: float 3s ease-in-out infinite;
+}
+
+.mos-logo {
+  width: 150px;
+  height: 150px;
+  opacity: 0.9;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+.loading-text {
+  font-size: 0.95rem;
+  color: rgb(var(--v-theme-on-background));
+  opacity: 0.8;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  animation: pulse 2s ease-in-out infinite;
+  min-height: 1.5em;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .v-btn--variant-flat.bg-primary,
