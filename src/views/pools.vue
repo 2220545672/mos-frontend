@@ -2439,13 +2439,12 @@ const openBtrfsSettingsDialog = (pool) => {
     }),
   );
 
-  const spindownConfig = pool.config.spindown || {
-    data_devices: [],
-    parity_devices: [],
-  };
-
-  btrfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
-  btrfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+  btrfsSettingsDialog.spindown.data_devices = (pool.data_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
+  btrfsSettingsDialog.spindown.parity_devices = (pool.parity_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
 
   btrfsSettingsDialog.value = true;
 };
@@ -2483,13 +2482,12 @@ const openMergerfsSettingsDialog = async (pool) => {
     }),
   );
 
-  const spindownConfig = pool.config.spindown || {
-    data_devices: [],
-    parity_devices: [],
-  };
-
-  mergerfsSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
-  mergerfsSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+  mergerfsSettingsDialog.spindown.data_devices = (pool.data_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
+  mergerfsSettingsDialog.spindown.parity_devices = (pool.parity_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
 
   mergerfsSettingsDialog.value = true;
 };
@@ -2510,13 +2508,12 @@ const openNonraidSettingsDialog = (pool) => {
     }),
   );
 
-  const spindownConfig = pool.config.spindown || {
-    data_devices: [],
-    parity_devices: [],
-  };
-
-  nonraidSettingsDialog.spindown.data_devices = (spindownConfig.data_devices || []).map((d) => ({ ...d }));
-  nonraidSettingsDialog.spindown.parity_devices = (spindownConfig.parity_devices || []).map((d) => ({ ...d }));
+  nonraidSettingsDialog.spindown.data_devices = (pool.data_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
+  nonraidSettingsDialog.spindown.parity_devices = (pool.parity_devices || [])
+    .filter(d => d.spindown !== undefined && d.spindown !== null)
+    .map((d) => ({ slot: d.slot, device: d.device, value: d.spindown }));
 
   nonraidSettingsDialog.value = true;
 };

@@ -7,7 +7,6 @@
     </div>
     <v-stepper :items="[$t('root password'), $t('web login & settings')]" v-model="step" hide-actions style="width: 100%">
       <template v-slot:item.1>
-        
         <v-card :title="$t('root password')" flat>
           <v-card-text>
             <div class="mb-4 text-body-2 text-medium-emphasis d-flex align-center">
@@ -83,7 +82,14 @@
               required
               @update:modelValue="changeByteUnit()"
             />
-            <v-switch v-model="darkMode" :label="$t('dark mode')" :true-value="'dark'" :false-value="'light'" inset color="green" @update:modelValue="setDarkMode()" />
+            <div class="d-flex align-center gap-3 mb-4">
+              <span class="text-title-medium font-weight-medium flex-shrink-0 mr-4">{{ $t('theme') }}</span>
+              <v-btn-toggle v-model="darkMode" @update:modelValue="setDarkMode($event)" mandatory color="green" density="compact" divided variant="outlined">
+                <v-btn :value="null">{{ $t('auto mode') }}</v-btn>
+                <v-btn value="light">{{ $t('light mode') }}</v-btn>
+                <v-btn value="dark">{{ $t('dark mode') }}</v-btn>
+              </v-btn-toggle>
+            </div>
             <span class="text-title-medium font-weight-medium">{{ $t('uicolor') }}</span>
             <v-color-picker v-model="color" show-swatches hide-canvas hide-sliders hide-inputs @update:modelValue="changePrimaryColor" />
           </v-card-text>
@@ -127,8 +133,7 @@ const rootpwd2 = ref('');
 const password = ref('');
 const password2 = ref('');
 const sambaUser = ref(true);
-const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-const darkMode = ref(prefersDark ? 'dark' : 'light');
+const darkMode = ref(null);
 const languages = ['en', 'de', 'fr'];
 const selectedLanguage = ref('en');
 const byteFormats = ref([
@@ -148,7 +153,12 @@ onMounted(() => {
 });
 
 const setDarkMode = async () => {
-  theme.change(darkMode.value);
+  if (darkMode.value === null) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    theme.change(prefersDark ? 'dark' : 'light');
+  } else {
+    theme.change(darkMode.value);
+  }
 };
 
 const changePrimaryColor = async (newColor) => {
@@ -162,7 +172,7 @@ const addUser = async () => {
     password: password.value,
     samba_user: sambaUser.value,
     role: 'admin',
-    darkmode: darkMode.value === 'dark',
+    darkmode: darkMode.value,
     language: selectedLanguage.value,
     byte_format: selectedByteFormat.value,
   };

@@ -25,15 +25,7 @@
                 {{ t('enter your totp code') }}
               </p>
               <v-form ref="formRef" v-model="isValid" @submit.prevent="onSubmit" @keydown.enter="onSubmit">
-                <v-text-field
-                  v-model="totpCode"
-                  :label="t('authenticator code')"
-                  autocomplete="one-time-code"
-                  variant="outlined"
-                  density="comfortable"
-                  :rules="[rules.required]"
-                  class="mb-4"
-                />
+                <v-text-field v-model="totpCode" :label="t('authenticator code')" autocomplete="one-time-code" variant="outlined" density="comfortable" :rules="[rules.required]" class="mb-4" />
                 <v-btn type="submit" block size="large" :disabled="!isValid || overlay">
                   {{ t('verify') }}
                 </v-btn>
@@ -44,7 +36,6 @@
       </v-row>
     </v-container>
   </div>
-
 </template>
 
 <script setup>
