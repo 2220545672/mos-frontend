@@ -68,6 +68,7 @@ jobs:
             --header "X-GitHub-Api-Version: 2022-11-28" | jq -r '.[].tag_name' | sort -V | tail -1)
         echo "Last tag: $LAST_TAG"
 
+        NEXT_TAG="0.0.1"
         if [[ $LAST_TAG =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
           MAJOR=${BASH_REMATCH[1]}
           MINOR=${BASH_REMATCH[2]}
@@ -78,7 +79,6 @@ jobs:
 
         echo "Next tag: $NEXT_TAG"
         echo "NEXT_TAG=${NEXT_TAG#v}" >> $GITHUB_ENV
-
     - name: Create Release Archive
       run: |
         cd ${{ github.workspace }}
