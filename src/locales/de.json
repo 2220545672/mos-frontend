@@ -1854,5 +1854,8 @@
   "initializing system": "System wird initialisiert",
   "loading modules": "Module werden geladen",
   "preparing interface": "Benutzeroberfläche wird vorbereitet",
-  "almost there": "Gleich geht's los"
+  "almost there": "Gleich geht's los",
+  "pull to refresh": "Zum Aktualisieren ziehen",
+  "release to refresh": "Loslassen zum Aktualisieren",
+  "refreshing": "Wird aktualisiert"
 }

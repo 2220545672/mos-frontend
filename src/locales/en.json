@@ -1854,5 +1854,8 @@
   "initializing system": "Initializing system",
   "loading modules": "Loading modules",
   "preparing interface": "Preparing interface",
-  "almost there": "Almost there"
+  "almost there": "Almost there",
+  "pull to refresh": "Pull to refresh",
+  "release to refresh": "Release to refresh",
+  "refreshing": "Refreshing"
 }
